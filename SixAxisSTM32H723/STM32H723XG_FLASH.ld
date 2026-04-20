@@ -131,6 +131,46 @@ SECTIONS
   PROVIDE( __tdata_start = ADDR(.tdata) );
   PROVIDE( __tdata_size = __tdata_end - __tdata_start );
 
+  /* D3 RAM ADC buffers fixed placement */
+  .d3ram_adc1 (NOLOAD) :
+  {
+    . = ALIGN(4);
+    KEEP(*(.d3ram_adc1))
+    . = ALIGN(4);
+  } >RAM_D3
+
+  . = ORIGIN(RAM_D3) + 0x1000;
+  .d3ram_adc3 (NOLOAD) :
+  {
+    . = ALIGN(4);
+    KEEP(*(.d3ram_adc3))
+    . = ALIGN(4);
+  } >RAM_D3
+
+  /* Ethernet DMA descriptors and RX pool in D2 RAM */
+  .RxDescripSection (NOLOAD) :
+  {
+    . = ALIGN(4);
+    KEEP(*(.RxDescripSection))
+    . = ALIGN(4);
+  } >RAM_D2
+
+  . = ORIGIN(RAM_D2) + 0x80;
+  .TxDescripSection (NOLOAD) :
+  {
+    . = ALIGN(4);
+    KEEP(*(.TxDescripSection))
+    . = ALIGN(4);
+  } >RAM_D2
+
+  . = ORIGIN(RAM_D2) + 0x100;
+  .Rx_PoolSection (NOLOAD) :
+  {
+    . = ALIGN(4);
+    KEEP(*(.Rx_PoolSection))
+    . = ALIGN(4);
+  } >RAM_D2
+
   PROVIDE( __data_start = ADDR(.data) );
   PROVIDE( __data_size = __data_end - __data_start );
 

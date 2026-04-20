@@ -26,7 +26,22 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "usart.h"
+#include "string.h"
+#include "xq_axis.h"
+#include "ht_client_task.h"
+#include "ht_udp_server.h"
+#include "mb.h"
+#include "adc.h"
+#include "xq_io.h"
+#include "xq_encoder.h"
+#include "xq_adc.h"
+#include "xq_period_task.h"
+#include "xq_pwm.h"
+#include "xq_dac.h"
+#include "tim.h"
+#include "xq_sdram.h"
+#include "xq_axis_intp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -118,9 +133,70 @@ void StartDefaultTask(void *argument)
   /* init code for LWIP */
   MX_LWIP_Init();
   /* USER CODE BEGIN StartDefaultTask */
+  xq_axis_init();
+
+  ht_client_task_init();
+
+  ht_udp_server_init();
+
+  XQ_TCA9535_Init_All();
+
+  XQ_PeriodTask_Start();
+
+  XQ_Encoder_Start(1, -1, -1, -1, 1);
+
+  xq_modbus_tcp_task_init ();
+
+  XQ_setPWM(0, 0.5, 10.0, 5, 100);
+  XQ_setPWM(1, 0.5, 10.0, 5, 100);
+
+  // XQ_StartADC (ADC_CHANNEL_DUAL_MODE);
+  // XQ_StartADC (ADC_CHANNEL_ADC3);
+  
+  // 初始化DAC (0-5V范围)
+  // XQ_DAC_Init(GP8403_RANGE_10V);
+
+  // 设置初始输出电压
+  // XQ_SetDAC(GP8403_CHANNEL_BOTH, 3.1f);
+
+  /* 编码器绑定：编码器0 → 轴0，编码器一圈10000计数，电机一圈5000脉冲 */
+  // XQ_Encoder_Bindto_Axis(AXIS_0, ENCODER_AXIS_0, 400, 5000, 20 * 5000, 50000, 50000, 5, 10);
+
+  /* 启动编码器跟随任务 */
+  // XQ_Encoder_Follow_Task_Start();
+
+  /* 输出流水跑马灯测试：OUT0~OUT48 依次点亮，每次只亮一个 */
+   uint8_t chaser_pin = 0;
+   const uint8_t CHASER_TOTAL = 49;  // OUT0 ~ OUT48
+
+  // xq_line_intp (AXIS_0, AXIS_1, 5000 * 100, 5000 * 10, 0, 0, 50000, 50000, 50000, 5);
+
+  // xq_axis_pulse_timed(AXIS_0, 1000, 5000);
+
+
   /* Infinite loop */
   for(;;)
   {
+    xqIO_Output = (1ULL << chaser_pin);
+    chaser_pin = (chaser_pin + 1) % CHASER_TOTAL;
+
+
+
+//     XQ_ABSMove((AxisID)0, 1, 5, 30000, 2450, 5);
+// osDelay(500);
+// printf ("1*************** \r\n");
+// XQ_ABSMove((AxisID)1, 1, 5, 30000, 2450, 5);
+// printf ("2*************** \r\n");
+// osDelay(1500);
+// XQ_ABSMove((AxisID)0, 0, 5, 30000, 2450, 5);
+// osDelay(500);
+// printf ("3*************** \r\n");
+// XQ_ABSMove((AxisID)1, 0, 5, 30000, 2450, 5);
+// printf ("4*************** \r\n");
+// osDelay(1500);
+// printf (" RUNNING*** \r\n");
+// printf ("***************************\r\n");
+
     HAL_GPIO_TogglePin(SYS_RUN_GPIO_Port, SYS_RUN_Pin);
     osDelay(100);
   }
