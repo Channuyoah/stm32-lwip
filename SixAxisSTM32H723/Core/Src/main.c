@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -32,7 +32,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "xq_axis.h"
+#include "xq_io.h"
+#include "xq_encoder.h"
+#include "xq_pwm.h"
+#include "mb.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -68,6 +72,9 @@ void MX_FREERTOS_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+uint32_t data_len = 512;
+uint32_t dmabuffer[512];
+
 /* USER CODE END 0 */
 
 /**
@@ -98,6 +105,8 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  
+  // SCB->CACR|=1<<2;
 
   /* USER CODE END Init */
 
@@ -137,6 +146,8 @@ int main(void)
   MX_FMC_Init();
   MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
+
+  printf ("System initialized.\n");
 
   /* USER CODE END 2 */
 
@@ -332,6 +343,8 @@ void MPU_Config(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
+
+  XQ_Encoder_TIM_Callback(htim);
 
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM12)

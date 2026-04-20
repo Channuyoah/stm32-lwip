@@ -44,12 +44,44 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user sources here
+    Application/ht_client_task.c
+    Application/ht_client_task_interrupt.c
+    Application/ht_client_task_motor.c
+    Application/ht_udp_server.c
+    Application/xq_adc.c
+    Application/xq_axis.c
+    Application/xq_axis_intp.c
+    Application/xq_curve.c
+    Application/xq_dac.c
+    Application/xq_encoder.c
+    Application/xq_io.c
+    Application/xq_period_task.c
+    Application/xq_pwm.c
+    Application/xq_sdram.c
+    Application/xq_utility.c
+    FreeModbus/mb.c
+    FreeModbus/mbcrc.c
+    FreeModbus/mbfunccoils.c
+    FreeModbus/mbfuncdiag.c
+    FreeModbus/mbfuncdisc.c
+    FreeModbus/mbfuncholding.c
+    FreeModbus/mbfuncinput.c
+    FreeModbus/mbfuncother.c
+    FreeModbus/mbrtu.c
+    FreeModbus/mbtcp.c
+    FreeModbus/mbutils.c
+    FreeModbus/portevent.c
+    FreeModbus/portother.c
+    FreeModbus/portserial.c
+    FreeModbus/porttcp.c
+    FreeModbus/porttimer.c
+    FreeModbus/xq_modbus.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined include paths
+    Application
+    FreeModbus
 )
 
 # Add project symbols (macros)
@@ -65,16 +97,4 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
-)
-
-# 烧录配置（可通过命令行传递）
-set(OPENOCD_CFG "${CMAKE_SOURCE_DIR}/flash.cfg" CACHE FILEPATH "OpenOCD config file")
-set(OPENOCD_COMMAND "openocd" CACHE STRING "OpenOCD executable")
-
-# 添加烧录目标
-add_custom_target(flash
-    COMMAND ${OPENOCD_COMMAND} -f ${OPENOCD_CFG} -c "program ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.elf verify reset exit"
-    COMMENT "Flashing ${PROJECT_NAME}.elf to target"
-    DEPENDS ${PROJECT_NAME}.elf
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

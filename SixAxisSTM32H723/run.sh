@@ -1,3 +1,5 @@
+#!/bin/bash
+chcp.com 65001
 # 获取当前脚本所在目录
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 
@@ -17,19 +19,12 @@ BUILD_DIR="$PROJECT_DIR/build"
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
-# # 运行 CMake 配置和编译项目
-# cmake ..
-# make -j 12
-# 创建并进入构建目录
-BUILD_DIR="$PROJECT_DIR/build"
-mkdir -p "$BUILD_DIR"
-cd "$BUILD_DIR"
-
 # 如果之前用的是其他生成器，清理缓存
 if [ -f "CMakeCache.txt" ]; then
     echo "Detected previous CMake cache, cleaning..."
     rm -rf CMakeCache.txt CMakeFiles
 fi
+
 # 运行 CMake 配置，指定工具链文件
 cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/gcc-arm-none-eabi.cmake -G "Unix Makefiles"
 make -j 12
@@ -50,37 +45,12 @@ else
     exit 1
 fi
 
-# # 1
-# # # 执行 OpenOCD 进行烧录
-# # openocd -f "$PROJECT_DIR/flash.cfg"
-# # # uncomment this could support downloading code to flash
-
-# 2
-# 执行 OpenOCD 进行烧录 (使用 CubeIDE 自带的 OpenOCD)
-# "D:/STM32CubeIDE_2.1.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.openocd.win32_2.4.400.202601091506/tools/bin/openocd.exe" \
-#     -s "D:/STM32CubeIDE_2.1.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.debug.openocd_2.3.300.202602021527/resources/openocd/st_scripts" \
-#     -f "$PROJECT_DIR/flash.cfg"
-
-# # 3
-# # 自动查找 CubeIDE 中的 OpenOCD
-# OPENOCD_BIN=$(find "D:/STM32CubeIDE"* -type f -path "*/tools/bin/openocd.exe" 2>/dev/null | head -1)
-# OPENOCD_SCRIPTS=$(find "D:/STM32CubeIDE"* -type d -path "*/resources/openocd/scripts" 2>/dev/null | head -1)
-
-# if [ -n "$OPENOCD_BIN" ] && [ -n "$OPENOCD_SCRIPTS" ]; then
-#     "$OPENOCD_BIN" -s "$OPENOCD_SCRIPTS" -f "$PROJECT_DIR/flash.cfg"
-# else
-#     echo "Error: OpenOCD not found in default CubeIDE paths."
-#     exit 1
-# fi
-
 # ==============================================
-# 通用烧录部分：自动查找工具 + 路径转换
+# 烧录部分：支持 jlink / stm32cubeprogrammer / openocd
 # ==============================================
 
 FLASHER=${1:-"jlink"}
 DEVICE="STM32H723VG"
-BIN_FILE="$BUILD_DIR/${PROJECT_NAME}.bin"
-HEX_FILE="$BUILD_DIR/${PROJECT_NAME}.hex"
 
 echo "----------------------------------------"
 echo "准备烧录: $PROJECT_NAME"
@@ -113,6 +83,7 @@ to_win_path() {
     echo "$1" | sed 's|^/\([a-zA-Z]\)/|\1:/|' | sed 's|/|\\|g'
 }
 
+# ========== 1. J-Link 烧录 ==========
 if [ "$FLASHER" = "jlink" ]; then
     # 查找 JLink.exe
     JLINK_CMD=$(find_tool "JLink.exe" \
@@ -145,28 +116,81 @@ EOF
     echo "执行 J-Link 烧录..."
     "$JLINK_CMD" -nogui 1 -autoconnect 1 -commandfile "$PROJECT_DIR/flash.jlink"
 
+# ========== 2. STM32CubeProgrammer 烧录（替代旧版 ST-LINK Utility） ==========
 elif [ "$FLASHER" = "stlink" ]; then
-    # 查找 ST-LINK_CLI.exe
-    STLINK_CMD=$(find_tool "ST-LINK_CLI.exe" \
-        "/c/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe" \
-        "/c/Program Files/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe"
+    # 查找 STM32_Programmer_CLI.exe
+    CUBE_CMD=$(find_tool "STM32_Programmer_CLI.exe" \
+        "/c/Program Files/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe" \
+        "/c/Program Files (x86)/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe" \
+        "/d/Program Files/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe"
     )
 
-    if [ -z "$STLINK_CMD" ]; then
-        echo "错误：未找到 ST-LINK_CLI.exe，请安装 STM32 ST-LINK Utility。"
+    if [ -z "$CUBE_CMD" ]; then
+        echo "错误：未找到 STM32_Programmer_CLI.exe，请安装 STM32CubeProgrammer。"
         exit 1
     fi
 
-    echo "找到 ST-LINK_CLI: $STLINK_CMD"
-    echo "执行 ST-Link 烧录..."
+    echo "找到 STM32CubeProgrammer: $CUBE_CMD"
+    echo "执行烧录（使用 STM32CubeProgrammer）..."
 
-    "$STLINK_CMD" -c SWD UR -P "$HEX_FILE" -Rst -Run
+    # 使用 HEX 文件，模式：SWD + Under Reset，烧录后校验、复位、运行
+    "$CUBE_CMD" -c port=SWD mode=UR -w "$HEX_FILE" -v -hardRst -run
+    if [ $? -eq 0 ]; then
+        echo "烧录成功！"
+    else
+        echo "烧录失败，请检查连接或芯片状态。"
+        exit 1
+    fi
+
+# ========== 3. OpenOCD 烧录（适合 VS Code + Cortex-Debug） ==========
+elif [ "$FLASHER" = "openocd" ]; then
+    # 查找 openocd.exe
+    OPENOCD_CMD=$(find_tool "openocd.exe" \
+        "/c/OpenOCD/bin/openocd.exe" \
+        "/c/Program Files/OpenOCD/bin/openocd.exe" \
+        "/d/OpenOCD/bin/openocd.exe"
+    )
+
+    if [ -z "$OPENOCD_CMD" ]; then
+        echo "错误：未找到 openocd.exe，请安装 OpenOCD 并将路径加入 PATH。"
+        exit 1
+    fi
+
+    echo "找到 OpenOCD: $OPENOCD_CMD"
+    echo "执行 OpenOCD 烧录..."
+
+    # 使用 BIN 文件，指定起始地址 0x08000000
+    # 生成临时 OpenOCD 脚本
+    cat > "$PROJECT_DIR/flash.openocd" << EOF
+# 使用 ST-Link 接口
+source [find interface/stlink.cfg]
+# 目标芯片配置（适用于 STM32H7 系列）
+source [find target/stm32h7x.cfg]
+
+# 复位连接
+init
+reset halt
+
+# 烧录程序
+program $BIN_FILE 0x08000000 verify
+
+# 复位并运行
+reset run
+exit
+EOF
+
+    # 执行 OpenOCD
+    "$OPENOCD_CMD" -f "$PROJECT_DIR/flash.openocd"
+
+    if [ $? -eq 0 ]; then
+        echo "烧录成功！"
+    else
+        echo "烧录失败，请检查 OpenOCD 配置或硬件连接。"
+        exit 1
+    fi
 
 else
     echo "错误：未知的烧录器参数 '$FLASHER'"
-    echo "用法: ./run.sh [jlink|stlink]"
+    echo "用法: ./run.sh [jlink|stlink|openocd]"
     exit 1
 fi
-
-echo "----------------------------------------"
-echo "烧录完成！"
