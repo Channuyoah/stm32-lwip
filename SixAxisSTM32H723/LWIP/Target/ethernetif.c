@@ -26,7 +26,7 @@
 #include "netif/etharp.h"
 #include "lwip/ethip6.h"
 #include "ethernetif.h"
-#include "lan8742.h"
+#include "yt8512.h"
 #include <string.h>
 #include "cmsis_os.h"
 #include "lwip/tcpip.h"
@@ -147,8 +147,8 @@ int32_t ETH_PHY_IO_ReadReg(uint32_t DevAddr, uint32_t RegAddr, uint32_t *pRegVal
 int32_t ETH_PHY_IO_WriteReg(uint32_t DevAddr, uint32_t RegAddr, uint32_t RegVal);
 int32_t ETH_PHY_IO_GetTick(void);
 
-lan8742_Object_t LAN8742;
-lan8742_IOCtx_t  LAN8742_IOCtx = {ETH_PHY_IO_Init,
+yt8512_Object_t YT8512;
+yt8512_IOCtx_t  YT8512_IOCtx = {ETH_PHY_IO_Init,
                                   ETH_PHY_IO_DeInit,
                                   ETH_PHY_IO_WriteReg,
                                   ETH_PHY_IO_ReadReg,
@@ -284,10 +284,10 @@ static void low_level_init(struct netif *netif)
 
 /* USER CODE END PHY_PRE_CONFIG */
   /* Set PHY IO functions */
-  LAN8742_RegisterBusIO(&LAN8742, &LAN8742_IOCtx);
+  YT8512_RegisterBusIO(&YT8512, &YT8512_IOCtx);
 
-  /* Initialize the LAN8742 ETH PHY */
-  if(LAN8742_Init(&LAN8742) != LAN8742_STATUS_OK)
+  /* Initialize the YT8512 ETH PHY */
+  if(YT8512_Init(&YT8512) != YT8512_STATUS_OK)
   {
     netif_set_link_down(netif);
     netif_set_down(netif);
@@ -296,10 +296,10 @@ static void low_level_init(struct netif *netif)
 
   if (hal_eth_init_status == HAL_OK)
   {
-    PHYLinkState = LAN8742_GetLinkState(&LAN8742);
+    PHYLinkState = YT8512_GetLinkState(&YT8512);
 
     /* Get link state */
-    if(PHYLinkState <= LAN8742_STATUS_LINK_DOWN)
+    if(PHYLinkState <= YT8512_STATUS_LINK_DOWN)
     {
       netif_set_link_down(netif);
       netif_set_down(netif);
@@ -308,19 +308,19 @@ static void low_level_init(struct netif *netif)
     {
       switch (PHYLinkState)
       {
-      case LAN8742_STATUS_100MBITS_FULLDUPLEX:
+      case YT8512_STATUS_100MBITS_FULLDUPLEX:
         duplex = ETH_FULLDUPLEX_MODE;
         speed = ETH_SPEED_100M;
         break;
-      case LAN8742_STATUS_100MBITS_HALFDUPLEX:
+      case YT8512_STATUS_100MBITS_HALFDUPLEX:
         duplex = ETH_HALFDUPLEX_MODE;
         speed = ETH_SPEED_100M;
         break;
-      case LAN8742_STATUS_10MBITS_FULLDUPLEX:
+      case YT8512_STATUS_10MBITS_FULLDUPLEX:
         duplex = ETH_FULLDUPLEX_MODE;
         speed = ETH_SPEED_10M;
         break;
-      case LAN8742_STATUS_10MBITS_HALFDUPLEX:
+      case YT8512_STATUS_10MBITS_HALFDUPLEX:
         duplex = ETH_HALFDUPLEX_MODE;
         speed = ETH_SPEED_10M;
         break;
@@ -801,34 +801,34 @@ void ethernet_link_thread(void* argument)
 
   for(;;)
   {
-  PHYLinkState = LAN8742_GetLinkState(&LAN8742);
+  PHYLinkState = YT8512_GetLinkState(&YT8512);
 
-  if(netif_is_link_up(netif) && (PHYLinkState <= LAN8742_STATUS_LINK_DOWN))
+  if(netif_is_link_up(netif) && (PHYLinkState <= YT8512_STATUS_LINK_DOWN))
   {
     HAL_ETH_Stop_IT(&heth);
     netif_set_down(netif);
     netif_set_link_down(netif);
   }
-  else if(!netif_is_link_up(netif) && (PHYLinkState > LAN8742_STATUS_LINK_DOWN))
+  else if(!netif_is_link_up(netif) && (PHYLinkState > YT8512_STATUS_LINK_DOWN))
   {
     switch (PHYLinkState)
     {
-    case LAN8742_STATUS_100MBITS_FULLDUPLEX:
+    case YT8512_STATUS_100MBITS_FULLDUPLEX:
       duplex = ETH_FULLDUPLEX_MODE;
       speed = ETH_SPEED_100M;
       linkchanged = 1;
       break;
-    case LAN8742_STATUS_100MBITS_HALFDUPLEX:
+    case YT8512_STATUS_100MBITS_HALFDUPLEX:
       duplex = ETH_HALFDUPLEX_MODE;
       speed = ETH_SPEED_100M;
       linkchanged = 1;
       break;
-    case LAN8742_STATUS_10MBITS_FULLDUPLEX:
+    case YT8512_STATUS_10MBITS_FULLDUPLEX:
       duplex = ETH_FULLDUPLEX_MODE;
       speed = ETH_SPEED_10M;
       linkchanged = 1;
       break;
-    case LAN8742_STATUS_10MBITS_HALFDUPLEX:
+    case YT8512_STATUS_10MBITS_HALFDUPLEX:
       duplex = ETH_HALFDUPLEX_MODE;
       speed = ETH_SPEED_10M;
       linkchanged = 1;
