@@ -49,3 +49,44 @@ Thumbs.db
 # 临时备份文件
 *.bak
 *~
+
+# --- Keil MDK (uVision) 特定文件 ---
+*.uvoptx          # 用户调试/布局配置
+*.uvopt
+*.scvd
+*.crf            # 编译浏览信息
+*.axf            # 可执行文件
+*.htm            # 编译输出报告
+*.lnp            # 链接器临时文件
+*.dep            # 依赖文件
+*.build_log.htm  # 构建日志
+# 精确忽略 MDK-ARM 目录下的所有生成文件和临时目录
+SixAxisSTM32H723/MDK-ARM/.cmsis/
+SixAxisSTM32H723/MDK-ARM/.eide/
+SixAxisSTM32H723/MDK-ARM/RTE/
+SixAxisSTM32H723/MDK-ARM/RTE_Components.h
+SixAxisSTM32H723/MDK-ARM/*.uvoptx
+SixAxisSTM32H723/MDK-ARM/*.uvopt
+SixAxisSTM32H723/MDK-ARM/*.scvd
+SixAxisSTM32H723/MDK-ARM/*.BAT
+SixAxisSTM32H723/MDK-ARM/*.code-workspace
+SixAxisSTM32H723/MDK-ARM/SixAxisSTM32H723/*.crf
+SixAxisSTM32H723/MDK-ARM/SixAxisSTM32H723/*.htm
+SixAxisSTM32H723/MDK-ARM/SixAxisSTM32H723/*.axf
+SixAxisSTM32H723/MDK-ARM/SixAxisSTM32H723/*.dep
+SixAxisSTM32H723/MDK-ARM/SixAxisSTM32H723/*.lnp
+SixAxisSTM32H723/MDK-ARM/SixAxisSTM32H723/*.build_log.htm
+
+# --- 自动生成的中间目录 ---
+RTE/             # Runtime Environment 自动生成
+_RTE/
+.cmsis/          # CMSIS 设备文件副本（通常不应入仓）
+.eide/           # 某些插件/工具的本地配置
+.clangd          # Clangd 语言服务器缓存
+
+# --- 其他 IDE 本地文件 ---
+*.code-workspace # VS Code 工作区（个人）
+*.BAT            # 临时批处理文件
+
+# --- 已跟踪但未覆盖的固件输出（与上面已有规则不冲突）---
+*.sct            # 链接脚本，若为自动生成则忽略
