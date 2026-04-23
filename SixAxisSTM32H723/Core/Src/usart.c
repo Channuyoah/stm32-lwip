@@ -164,33 +164,3 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     HAL_UART_Receive_IT(&huart1, &lpuart_rx_temp, 1);
   }
 }
-
-
-/**
- * @brief ���´���Ϊ��֧�ֱ�׼ printf ����
- * @note: ����д���º�����lwip�޷��������У���֪��ԭ��
- */
-
-struct __FILE 
-{ 
-	int handle; 
-}; 
-
-FILE __stdout;       
-
-/* ����_sys_exit()�Ա���ʹ�ð�����ģʽ */
-void _sys_exit(int x) 
-{ 
-	x = x; 
-} 
-
-/* �ض���fputc���� */ 
-int fputc(int ch, FILE *f)
-{ 	 
-	uint8_t t =(uint8_t)ch;  
-  HAL_UART_Transmit (&huart1, &t, 1, 100);	
-	return ch;
-}
-
-/* USER CODE END 1 */
-

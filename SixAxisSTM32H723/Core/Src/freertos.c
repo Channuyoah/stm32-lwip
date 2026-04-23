@@ -277,20 +277,16 @@ void StartDefaultTask(void *argument)
     // printf ("\r\n");
     // printf ("t2t1 = %d\n", t2t1);
     
-XQ_ABSMove((AxisID)0, 1, 5, 30000, 2450, 5);
-osDelay(500);
-printf ("1*************** \r\n");
-XQ_ABSMove((AxisID)1, 1, 5, 30000, 2450, 5);
-printf ("2*************** \r\n");
-osDelay(1500);
-XQ_ABSMove((AxisID)0, 0, 5, 30000, 2450, 5);
-osDelay(500);
-printf ("3*************** \r\n");
-XQ_ABSMove((AxisID)1, 0, 5, 30000, 2450, 5);
-printf ("4*************** \r\n");
-osDelay(1500);
-printf (" RUNNING*** \r\n");
-printf ("***************************\r\n");
+    osDelay(500);
+    printf ("1*************** \r\n");
+    osDelay(500);
+    printf ("2*************** \r\n");
+    osDelay(500);
+    printf ("3*************** \r\n");
+    osDelay(500);
+    printf ("4*************** \r\n");
+    printf (" RUNNING*** \r\n");
+    printf ("***************************\r\n");
     HAL_GPIO_TogglePin (SYS_RUN_GPIO_Port, SYS_RUN_Pin); 
   }
   /* USER CODE END StartDefaultTask */

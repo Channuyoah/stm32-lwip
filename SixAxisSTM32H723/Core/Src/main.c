@@ -31,6 +31,8 @@
 #include "gpio.h"
 #include "fmc.h"
 
+#include "stdio.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "xq_axis.h"
@@ -72,6 +74,14 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+// 重写 _write 函数，实现 printf 重定向
+int _write(int file, char *ptr, int len)
+{
+    // 将 huart1 替换为你实际使用的串口句柄，如 &huart2
+    HAL_UART_Transmit(&huart1, (uint8_t *)ptr, len, HAL_MAX_DELAY);
+    return len;
+}
 
 uint32_t data_len = 512;
 uint32_t dmabuffer[512];
@@ -148,9 +158,7 @@ int main(void)
   MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
 
-
-
-  printf ("System initialized.\n");
+  // printf ("System initialized.\n");
 
   /* USER CODE END 2 */
 

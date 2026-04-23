@@ -46,7 +46,7 @@ else
 fi
 
 # ==============================================
-# 烧录部分：支持 jlink / stm32cubeprogrammer / openocd
+# 烧录部分：支持 jlink / stm32cubeprogrammer / openocd / keil
 # ==============================================
 
 FLASHER=${1:-"jlink"}
@@ -189,8 +189,93 @@ EOF
         exit 1
     fi
 
+# ========== 4. Keil MDK 烧录（通过固定下载工程） ==========
+elif [ "$FLASHER" = "keil" ]; then
+    # 固定的 Keil 下载工程路径（注意：使用正斜杠，Git Bash 可识别）
+    KEIL_PROJECT_BASE="D:/VSCODESTM32H723/keil_for_download/SevenAxis/MDK-ARM"
+    KEIL_PROJECT_FILE="$KEIL_PROJECT_BASE/SixAxisSTM32H723.uvprojx"
+    KEIL_OUTPUT_DIR="$KEIL_PROJECT_BASE/SixAxisSTM32H723"
+
+    # 转换为 Unix 风格路径供 Git Bash 操作（将盘符转为 /d/ 形式）
+    UNIX_KEIL_PROJECT_FILE=$(echo "$KEIL_PROJECT_FILE" | sed 's|^\([A-Z]\):|/\1|' | sed 's|\\|/|g')
+    UNIX_KEIL_OUTPUT_DIR=$(echo "$KEIL_OUTPUT_DIR" | sed 's|^\([A-Z]\):|/\1|' | sed 's|\\|/|g')
+
+    # 检查 Keil 工程是否存在
+    if [ ! -f "$UNIX_KEIL_PROJECT_FILE" ]; then
+        echo "错误：Keil 工程文件不存在：$UNIX_KEIL_PROJECT_FILE"
+        exit 1
+    fi
+
+    # 固定 UV4.exe 路径（用户指定）
+    UV4_CMD="E:/keil5/UV4/UV4.exe"
+    # 转换为 Unix 格式用于检查存在性
+    UNIX_UV4_CMD=$(echo "$UV4_CMD" | sed 's|^\([A-Z]\):|/\1|' | sed 's|\\|/|g')
+    if [ ! -f "$UNIX_UV4_CMD" ]; then
+        echo "错误：未找到 UV4.exe，请检查路径：$UV4_CMD"
+        exit 1
+    fi
+
+    echo "找到 Keil uVision: $UV4_CMD"
+    echo "Keil 工程路径: $UNIX_KEIL_PROJECT_FILE"
+    echo "输出目标目录: $UNIX_KEIL_OUTPUT_DIR"
+
+    # 创建目标输出目录（如果不存在）
+    mkdir -p "$UNIX_KEIL_OUTPUT_DIR"
+
+    # 复制编译生成的 ELF、BIN、HEX 文件到 Keil 工程输出目录，并重命名为工程期望的文件名
+    echo "正在复制输出文件..."
+
+    if [ -f "$ELF_FILE" ]; then
+        cp -f "$ELF_FILE" "$UNIX_KEIL_OUTPUT_DIR/SixAxisSTM32H723.elf"
+        echo "  ELF 复制完成"
+    else
+        echo "  ELF 文件不存在，跳过"
+    fi
+
+    if [ -f "$BIN_FILE" ]; then
+        cp -f "$BIN_FILE" "$UNIX_KEIL_OUTPUT_DIR/SixAxisSTM32H723.bin"
+        echo "  BIN 复制完成"
+    else
+        echo "  BIN 文件不存在，跳过"
+    fi
+
+    if [ -f "$HEX_FILE" ]; then
+        cp -f "$HEX_FILE" "$UNIX_KEIL_OUTPUT_DIR/SixAxisSTM32H723.hex"
+        echo "  HEX 复制完成"
+    else
+        echo "  HEX 文件不存在，跳过"
+    fi
+
+    # 如果有 .axf 文件也复制（Keil 使用 .axf 作为调试文件）
+    AXF_FILE="$BUILD_DIR/${PROJECT_NAME}.axf"
+    if [ -f "$AXF_FILE" ]; then
+        cp -f "$AXF_FILE" "$UNIX_KEIL_OUTPUT_DIR/SixAxisSTM32H723.axf"
+        echo "  AXF 复制完成"
+    fi
+
+    echo "文件复制完毕。"
+
+    # 转换为 Windows 路径供 UV4.exe 使用
+    WIN_KEIL_PROJECT_FILE=$(to_win_path "$UNIX_KEIL_PROJECT_FILE")
+
+    echo "执行 Keil 命令行烧录..."
+    echo "（请确保 Keil 工程的 Flash Download 选项中已勾选 'Reset and Run'）"
+
+    # 使用绝对路径调用 UV4.exe（需转换为 Windows 格式）
+    "$UNIX_UV4_CMD" -f "$WIN_KEIL_PROJECT_FILE" -j0
+
+    if [ $? -eq 0 ]; then
+        echo "Keil 烧录成功！"
+    else
+        echo "Keil 烧录失败，请检查："
+        echo "  1. 调试器连接是否正常"
+        echo "  2. Keil 工程配置的芯片型号、调试器类型是否正确"
+        echo "  3. 目标板是否已上电"
+        exit 1
+    fi
+
 else
     echo "错误：未知的烧录器参数 '$FLASHER'"
-    echo "用法: ./run.sh [jlink|stlink|openocd]"
+    echo "用法: ./run.sh [jlink|stlink|openocd|keil]"
     exit 1
 fi
