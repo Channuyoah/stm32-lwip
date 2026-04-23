@@ -23,6 +23,71 @@
 
 /* USER CODE BEGIN 0 */
 
+/**
+  * @brief  执行SDRAM外部存储器初始化序列
+  * @param  无
+  * @retval 无
+  */
+void BSP_SDRAM_Initialization_sequence(void)
+{
+  FMC_SDRAM_CommandTypeDef Command;
+  __IO uint32_t tmpmrd = 0;
+  
+  /* 步骤1: 配置时钟使能命令，给SDRAM提供时钟 */
+  Command.CommandMode            = FMC_SDRAM_CMD_CLK_ENABLE;
+  Command.CommandTarget          = FMC_SDRAM_CMD_TARGET_BANK1;
+  Command.AutoRefreshNumber      = 1;
+  Command.ModeRegisterDefinition = 0;
+
+  /* 发送命令 */
+  HAL_SDRAM_SendCommand(&hsdram1, &Command, SDRAM_TIMEOUT);
+
+  /* 步骤2: 插入至少100us的延迟 */ 
+  /* 由于systick时基单位为ms，插入的延迟等于1ms */
+  HAL_Delay(1);
+
+  /* 步骤3: 配置预充电所有存储体(PALL)命令 */ 
+  Command.CommandMode            = FMC_SDRAM_CMD_PALL;
+  Command.CommandTarget          = FMC_SDRAM_CMD_TARGET_BANK1;
+  Command.AutoRefreshNumber      = 1;
+  Command.ModeRegisterDefinition = 0;
+
+  /* 发送命令（对所有Bank预充电） */
+  HAL_SDRAM_SendCommand(&hsdram1, &Command, SDRAM_TIMEOUT);
+
+  /* 步骤4: 配置自动刷新命令 */ 
+  Command.CommandMode            = FMC_SDRAM_CMD_AUTOREFRESH_MODE;
+  Command.CommandTarget          = FMC_SDRAM_CMD_TARGET_BANK1;
+  Command.AutoRefreshNumber      = 8;
+  Command.ModeRegisterDefinition = 0;
+
+  /* 发送命令（自动刷新） */
+  HAL_SDRAM_SendCommand(&hsdram1, &Command, SDRAM_TIMEOUT);
+
+  /* 步骤5: 编程外部存储器模式寄存器 */
+  /* CAS延迟 = 3, 突发长度 = 1 */
+  tmpmrd = (uint32_t)SDRAM_MODEREG_BURST_LENGTH_1          |
+                     SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL   |
+                     SDRAM_MODEREG_CAS_LATENCY_3           |
+                     SDRAM_MODEREG_OPERATING_MODE_STANDARD |
+                     SDRAM_MODEREG_WRITEBURST_MODE_SINGLE;
+  
+  Command.CommandMode            = FMC_SDRAM_CMD_LOAD_MODE;
+  Command.CommandTarget          = FMC_SDRAM_CMD_TARGET_BANK1;
+  Command.AutoRefreshNumber      = 1;
+  Command.ModeRegisterDefinition = tmpmrd;
+
+  /* 发送命令 */
+  HAL_SDRAM_SendCommand(&hsdram1, &Command, SDRAM_TIMEOUT);
+
+  /* 步骤6: 设置刷新率计数器 */
+  /* 刷新计数设置为838 (64ms / 8192行 * 110MHz - 20) */
+  /* 公式: COUNT = (刷新周期ms * SDRAM时钟MHz / 行数) - 20 */
+  /* 刷新周期 = 64ms, SDRAM时钟 = 110MHz, 行数 = 8192 */
+  /* COUNT = (64ms * 110MHz / 8192) - 20 = 858 - 20 = 838 */
+  HAL_SDRAM_ProgramRefreshRate(&hsdram1, 838);
+}
+
 /* USER CODE END 0 */
 
 SDRAM_HandleTypeDef hsdram1;
@@ -69,7 +134,7 @@ void MX_FMC_Init(void)
   }
 
   /* USER CODE BEGIN FMC_Init 2 */
-
+  BSP_SDRAM_Initialization_sequence();
   /* USER CODE END FMC_Init 2 */
 }
 

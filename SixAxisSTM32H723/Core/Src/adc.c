@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -21,6 +21,8 @@
 #include "adc.h"
 
 /* USER CODE BEGIN 0 */
+
+#include "tim.h"
 
 /* USER CODE END 0 */
 
@@ -93,6 +95,12 @@ void MX_ADC1_Init(void)
   }
   /* USER CODE BEGIN ADC1_Init 2 */
 
+  /* 手动设置BOOST模式为50MHz (BOOST = 11) 
+   * 对于50MHz ADC时钟，必须设置BOOST_1 | BOOST_0
+   * 这样可以达到最大采样速度
+   */
+  MODIFY_REG(hadc1.Instance->CR, ADC_CR_BOOST, ADC_CR_BOOST_1 | ADC_CR_BOOST_0);
+
   /* USER CODE END ADC1_Init 2 */
 
 }
@@ -145,6 +153,9 @@ void MX_ADC2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC2_Init 2 */
+
+  /* 设置ADC2的BOOST模式为50MHz */
+  MODIFY_REG(hadc2.Instance->CR, ADC_CR_BOOST, ADC_CR_BOOST_1 | ADC_CR_BOOST_0);
 
   /* USER CODE END ADC2_Init 2 */
 

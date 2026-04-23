@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -22,6 +22,11 @@
 #include "stm32h7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include "xq_pwm.h"
+#include "xq_period_task.h"
+#include "xq_axis.h"
+#include "xq_encoder.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -65,7 +70,15 @@ extern TIM_HandleTypeDef htim8;
 extern TIM_HandleTypeDef htim12;
 
 /* USER CODE BEGIN EV */
-
+extern LPTIM_HandleTypeDef hlptim2;
+extern LPTIM_HandleTypeDef hlptim1;
+extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim4; 
+extern TIM_HandleTypeDef htim23;
+extern TIM_HandleTypeDef htim14;
+extern TIM_HandleTypeDef htim15;
+extern TIM_HandleTypeDef htim16;
+extern TIM_HandleTypeDef htim17;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -253,5 +266,218 @@ void ADC3_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+
+
+
+/**
+  * @brief PWM1输出中断处理函数
+  */
+void TIM5_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim5, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim5, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim5, TIM_IT_UPDATE);
+      TIM5_UpdateCallback();
+    }
+  }
+}
+
+/**
+  * @brief PWM2输出中断处理函数
+  */
+void TIM1_UP_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim1, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
+      TIM1_UpdateCallback();
+    }
+  }
+}
+
+/**
+ * @brief 轴1定时器更新中断处理函数
+ */
+void TIM2_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim2, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim2, TIM_IT_UPDATE);
+      xq_axis_timx_update(AXIS_1);
+    }
+  }
+}
+
+/**
+ * @brief 轴0定时器更新中断处理函数
+ */
+void TIM15_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim15, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim15, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim15, TIM_IT_UPDATE);
+      xq_axis_timx_update(AXIS_0);
+    }
+  }
+}
+
+/**
+ * @brief 轴3定时器更新中断处理函数
+ */
+void TIM16_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim16, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim16, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim16, TIM_IT_UPDATE);
+      xq_axis_timx_update(AXIS_3);
+    }
+  }
+}
+
+/**
+ * @brief 轴2定时器更新中断处理函数
+ */
+void TIM17_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim17, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim17, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim17, TIM_IT_UPDATE);
+      xq_axis_timx_update(AXIS_2);
+    }
+  }
+}
+
+/**
+ * @brief 轴5定时器更新中断处理函数 (TIM14, 与TIM8共享中断)
+ */
+void TIM8_TRG_COM_TIM14_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim14, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim14, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim14, TIM_IT_UPDATE);
+      xq_axis_timx_update(AXIS_5);
+    }
+  }
+}
+
+/**
+ * @brief 轴4定时器更新中断处理函数 (TIM8, 与TIM13共享中断)
+ */
+void TIM8_UP_TIM13_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim8, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim8, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim8, TIM_IT_UPDATE);
+      xq_axis_timx_update(AXIS_4);
+    }
+  }
+
+  if (__HAL_TIM_GET_FLAG(&htim13, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim13, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim13, TIM_IT_UPDATE);
+      xq_axis_timx_update(AXIS_6);
+    }
+  }
+}
+
+
+/**  * @brief 编码共4定时器更新中断处理函数 (LPTIM1)
+  */
+void LPTIM1_IRQHandler(void)
+{
+  if (__HAL_LPTIM_GET_FLAG(&hlptim1, LPTIM_FLAG_ARRM) != RESET)
+  {
+    if (__HAL_LPTIM_GET_IT_SOURCE(&hlptim1, LPTIM_IT_ARRM) != RESET)
+    {
+      __HAL_LPTIM_CLEAR_FLAG(&hlptim1, LPTIM_FLAG_ARRM);
+      XQ_Encoder_LPTIM_Callback(&hlptim1); // 编码共4更新
+    }
+  }
+}
+
+
+/**  * @brief 编码器0定时器更新中断处理函数 (LPTIM2)
+  */
+void LPTIM2_IRQHandler(void)
+{
+  if (__HAL_LPTIM_GET_FLAG(&hlptim2, LPTIM_FLAG_ARRM) != RESET)
+  {
+    if (__HAL_LPTIM_GET_IT_SOURCE(&hlptim2, LPTIM_IT_ARRM) != RESET)
+    {
+      __HAL_LPTIM_CLEAR_FLAG(&hlptim2, LPTIM_FLAG_ARRM);
+      XQ_Encoder_LPTIM_Callback(&hlptim2); // 编码器0更新
+    }
+  }
+}
+
+
+/**
+  * @brief 编码器1定时器更新中断处理函数 (TIM3)
+  */
+void TIM3_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim3, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim3, TIM_IT_UPDATE);
+      XQ_Encoder_TIM_Callback(&htim3); // 编码器1更新
+    }
+  }
+}
+
+/**
+  * @brief 编码器2定时器更新中断处理函数 (TIM4)
+  */
+void TIM4_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM4_IRQn 0 */
+  if (__HAL_TIM_GET_FLAG(&htim4, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim4, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim4, TIM_IT_UPDATE);
+      XQ_Encoder_TIM_Callback(&htim4); // 编码器2更新
+    }
+  }
+}
+
+
+/**
+  * @brief 编码器3定时器更新中断处理函数 (TIM23)
+  */
+void TIM23_IRQHandler(void)
+{
+  if (__HAL_TIM_GET_FLAG(&htim23, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim23, TIM_IT_UPDATE) != RESET)
+    {
+      __HAL_TIM_CLEAR_IT(&htim23, TIM_IT_UPDATE);
+      XQ_Encoder_TIM_Callback(&htim23); // 编码器3更新
+    }
+  }
+}
+
+
+
 
 /* USER CODE END 1 */
