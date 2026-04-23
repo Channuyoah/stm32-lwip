@@ -295,7 +295,7 @@ try:
    */
   if (ETH_PHY_IO_ReadReg (0, 0x00, &regvalue) >= 0) {
 
-    printf ("bcr_regvalue = 0x%04X\n", regvalue);
+    printf ("bcr_regvalue = 0x%04X\r\n", regvalue);
 
     /* 检查是否正在软件复位，等待100ms，重新读取寄存器 */
     if (regvalue & 0x8000) {
@@ -309,31 +309,31 @@ try:
     while(1);
   }
   
-  // /* 读取并显示PHY ID */
-  // uint32_t phyid1 = 0, phyid2 = 0;
-  // if (ETH_PHY_IO_ReadReg(0, 0x02, &phyid1) >= 0 &&
-  //     ETH_PHY_IO_ReadReg(0, 0x03, &phyid2) >= 0) {
-  //   printf("PHY ID: 0x%04X%04X\r\n", phyid1, phyid2);
-  // }
+  /* 读取并显示PHY ID */
+  uint32_t phyid1 = 0, phyid2 = 0;
+  if (ETH_PHY_IO_ReadReg(0, 0x02, &phyid1) >= 0 &&
+      ETH_PHY_IO_ReadReg(0, 0x03, &phyid2) >= 0) {
+    printf("PHY ID: 0x%04X%04X\r\n", phyid1, phyid2);
+  }
   
-  // /* 读取基本状态寄存器(0x01) */
-  // uint32_t bsr = 0;
-  // if (ETH_PHY_IO_ReadReg(0, 0x01, &bsr) >= 0) {
-  //   printf("BSR = 0x%04X\r\n", bsr);
-  //   printf("  Link Status: %s\r\n", (bsr & 0x04) ? "UP" : "DOWN");
-  //   printf("  AutoNeg Ability: %s\r\n", (bsr & 0x08) ? "Yes" : "No");
-  //   printf("  AutoNeg Complete: %s\r\n", (bsr & 0x20) ? "Done" : "Pending");
-  // }
+  /* 读取基本状态寄存器(0x01) */
+  uint32_t bsr = 0;
+  if (ETH_PHY_IO_ReadReg(0, 0x01, &bsr) >= 0) {
+    printf("BSR = 0x%04X\r\n", bsr);
+    printf("  Link Status: %s\r\n", (bsr & 0x04) ? "UP" : "DOWN");
+    printf("  AutoNeg Ability: %s\r\n", (bsr & 0x08) ? "Yes" : "No");
+    printf("  AutoNeg Complete: %s\r\n", (bsr & 0x20) ? "Done" : "Pending");
+  }
   
-  // /* 读取YT8512H特殊状态寄存器(0x11) */
-  // uint32_t ssr = 0;
-  // if (ETH_PHY_IO_ReadReg(0, 0x11, &ssr) >= 0) {
-  //   printf("SSR (0x11) = 0x%04X\r\n", ssr);
-  //   printf("  Link: %s\r\n", (ssr & 0x0400) ? "UP" : "DOWN");
-  //   uint32_t speed = (ssr >> 14) & 0x03;
-  //   printf("  Speed: %s\r\n", (speed == 1) ? "100M" : (speed == 0) ? "10M" : "Unknown");
-  //   printf("  Duplex: %s\r\n", (ssr & 0x2000) ? "Full" : "Half");
-  // }
+  /* 读取YT8512H特殊状态寄存器(0x11) */
+  uint32_t ssr = 0;
+  if (ETH_PHY_IO_ReadReg(0, 0x11, &ssr) >= 0) {
+    printf("SSR (0x11) = 0x%04X\r\n", ssr);
+    printf("  Link: %s\r\n", (ssr & 0x0400) ? "UP" : "DOWN");
+    uint32_t speed = (ssr >> 14) & 0x03;
+    printf("  Speed: %s\r\n", (speed == 1) ? "100M" : (speed == 0) ? "10M" : "Unknown");
+    printf("  Duplex: %s\r\n", (ssr & 0x2000) ? "Full" : "Half");
+  }
   
   // /* 如果自动协商未启用，强制启用 */
   // if (!(regvalue & 0x1000)) {
@@ -403,7 +403,6 @@ try:
     netif_set_up(netif);
     netif_set_link_up(netif);
 /* USER CODE BEGIN PHY_POST_CONFIG */
-
 /* USER CODE END PHY_POST_CONFIG */
     }
 
@@ -914,7 +913,7 @@ void ethernet_link_thread(void* argument)
   }
 
 /* USER CODE BEGIN ETH link Thread core code for User BSP */
-
+printf("PHYLinkState: %d\r\n", PHYLinkState);
 /* USER CODE END ETH link Thread core code for User BSP */
 
     osDelay(100);

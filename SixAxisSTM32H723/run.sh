@@ -301,6 +301,6 @@ elif [ "$FLASHER" = "cubeide" ]; then
 
 else
     echo "错误：未知的烧录器参数 '$FLASHER'"
-    echo "用法: ./run.sh [jlink|stlink|openocd|keil|cubeide]"
+    echo "用法: ./run.sh cubeide [jlink|stlink|openocd|keil|cubeide]"
     exit 1
 fi

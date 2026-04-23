@@ -99,7 +99,7 @@ int32_t  LAN8742_RegisterBusIO(lan8742_Object_t *pObj, lan8742_IOCtx_t *ioctx)
      /* Get the device address from special mode register */
      for(addr = 0; addr <= LAN8742_MAX_DEV_ADDR; addr ++)
      {
-       if(pObj->IO.ReadReg(addr, LAN8742_SMR, &regvalue) < 0)
+       if(pObj->IO.ReadReg(addr, 0x11, &regvalue) < 0)
        {
          status = LAN8742_STATUS_READ_ERROR;
          /* Can't read from this device address
@@ -261,79 +261,41 @@ int32_t LAN8742_GetLinkState(lan8742_Object_t *pObj)
   uint32_t readval = 0;
 
   /* Read Status register  */
-  if(pObj->IO.ReadReg(pObj->DevAddr, LAN8742_BSR, &readval) < 0)
+  if(pObj->IO.ReadReg(pObj->DevAddr, 0x11, &readval) < 0)
   {
     return LAN8742_STATUS_READ_ERROR;
   }
 
   /* Read Status register again */
-  if(pObj->IO.ReadReg(pObj->DevAddr, LAN8742_BSR, &readval) < 0)
+  if(pObj->IO.ReadReg(pObj->DevAddr, 0x11, &readval) < 0)
   {
     return LAN8742_STATUS_READ_ERROR;
   }
 
-  if((readval & LAN8742_BSR_LINK_STATUS) == 0)
+  if((readval & 0x0400) == 0)
   {
     /* Return Link Down status */
     return LAN8742_STATUS_LINK_DOWN;
   }
 
-  /* Check Auto negotiation */
-  if(pObj->IO.ReadReg(pObj->DevAddr, LAN8742_BCR, &readval) < 0)
+  if(((readval & 0x4010) !=0x4010)&&((readval & 0x2000) !=0))
   {
-    return LAN8742_STATUS_READ_ERROR;
+    return LAN8742_STATUS_100MBITS_FULLDUPLEX;
   }
-
-  if((readval & LAN8742_BCR_AUTONEGO_EN) != LAN8742_BCR_AUTONEGO_EN)
+  else if ((readval & 0x4010) != 0x4010)
   {
-    if(((readval & LAN8742_BCR_SPEED_SELECT) == LAN8742_BCR_SPEED_SELECT) && ((readval & LAN8742_BCR_DUPLEX_MODE) == LAN8742_BCR_DUPLEX_MODE))
-    {
-      return LAN8742_STATUS_100MBITS_FULLDUPLEX;
-    }
-    else if ((readval & LAN8742_BCR_SPEED_SELECT) == LAN8742_BCR_SPEED_SELECT)
-    {
-      return LAN8742_STATUS_100MBITS_HALFDUPLEX;
-    }
-    else if ((readval & LAN8742_BCR_DUPLEX_MODE) == LAN8742_BCR_DUPLEX_MODE)
-    {
-      return LAN8742_STATUS_10MBITS_FULLDUPLEX;
-    }
-    else
-    {
-      return LAN8742_STATUS_10MBITS_HALFDUPLEX;
-    }
+    return LAN8742_STATUS_100MBITS_HALFDUPLEX;
   }
-  else /* Auto Nego enabled */
+  else if ((readval & 0x2000) != 0x2000)
   {
-    if(pObj->IO.ReadReg(pObj->DevAddr, LAN8742_PHYSCSR, &readval) < 0)
-    {
-      return LAN8742_STATUS_READ_ERROR;
-    }
-
-    /* Check if auto nego not done */
-    if((readval & LAN8742_PHYSCSR_AUTONEGO_DONE) == 0)
-    {
-      return LAN8742_STATUS_AUTONEGO_NOTDONE;
-    }
-
-    if((readval & LAN8742_PHYSCSR_HCDSPEEDMASK) == LAN8742_PHYSCSR_100BTX_FD)
-    {
-      return LAN8742_STATUS_100MBITS_FULLDUPLEX;
-    }
-    else if ((readval & LAN8742_PHYSCSR_HCDSPEEDMASK) == LAN8742_PHYSCSR_100BTX_HD)
-    {
-      return LAN8742_STATUS_100MBITS_HALFDUPLEX;
-    }
-    else if ((readval & LAN8742_PHYSCSR_HCDSPEEDMASK) == LAN8742_PHYSCSR_10BT_FD)
-    {
-      return LAN8742_STATUS_10MBITS_FULLDUPLEX;
-    }
-    else
-    {
-      return LAN8742_STATUS_10MBITS_HALFDUPLEX;
-    }
+    return LAN8742_STATUS_10MBITS_FULLDUPLEX;
+  }
+  else
+  {
+    return LAN8742_STATUS_10MBITS_HALFDUPLEX;
   }
 }
+
 
 /**
   * @brief  Set the link state of LAN8742 device.
