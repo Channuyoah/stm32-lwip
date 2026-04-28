@@ -247,7 +247,6 @@ void ETH_IRQHandler(void)
   /* USER CODE END ETH_IRQn 0 */
   HAL_ETH_IRQHandler(&heth);
   /* USER CODE BEGIN ETH_IRQn 1 */
-
   /* USER CODE END ETH_IRQn 1 */
 }
 

@@ -10,10 +10,6 @@
 #include "math.h"
 
 #include "ht_client_task_motor.h"
-#include <stdio.h>
-#include <stdbool.h>
-#include "FreeRTOS.h"
-#include "task.h"
 
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -1127,7 +1123,7 @@ xq_axis_change_target_position (AxisID id, int32_t target_position, uint32_t max
     }
   }
 
-  printf ("target_position = %ld\n", target_position);
+  printf ("target_position = %d\n", target_position);
   
   /* ========== 步骤8：解锁并恢复执行 ========== */
   
@@ -1235,7 +1231,7 @@ xq_axis_stop_pwm(AxisID id) {
 
   __HAL_TIM_DISABLE(axis[id].tim);
 
-  printf ("Axis %d stopped. Final position: %ld\n", id, axis[id].position);
+  printf ("Axis %d stopped. Final position: %d\n", id, axis[id].position);
 }
 
 
@@ -1782,16 +1778,16 @@ XQ_IncMoveStep (AxisID id, float_t Incmm, float_t ms) {
 
   /* 检查频率是否在有效范围内 */
   if (frequency > axis[id].max_running_f) {
-    printf("Error: Calculated frequency %.2f Hz exceeds max speed %lu Hz\r\n", 
+    printf("Error: Calculated frequency %.2f Hz exceeds max speed %u Hz\r\n", 
            frequency, axis[id].max_running_f);
-    printf("       (pulse=%lu, time=%.3fs)\r\n", abs_pulse, time_s);
+    printf("       (pulse=%u, time=%.3fs)\r\n", abs_pulse, time_s);
     return -1;
   }
 
   if (frequency < axis[id].min_start_f) {
-    printf("Error: Calculated frequency %.2f Hz is below min start speed %lu Hz\r\n", 
+    printf("Error: Calculated frequency %.2f Hz is below min start speed %u Hz\r\n", 
            frequency, axis[id].min_start_f);
-    printf("       (pulse=%lu, time=%.3fs)\r\n", abs_pulse, time_s);
+    printf("       (pulse=%u, time=%.3fs)\r\n", abs_pulse, time_s);
     return -1;
   }
 

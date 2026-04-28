@@ -4,8 +4,6 @@
 #include "usart.h"
 #include "xq_axis_intp.h"
 #include "tim.h"
-#include <stdio.h>
-#include <stdbool.h>
 
 
 extern SCurve curve_pool[];

@@ -25,7 +25,6 @@
 #include "i2c.h"
 #include "lptim.h"
 #include "lwip.h"
-#include "stm32h7xx_hal.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -147,8 +146,6 @@ int main(void)
   MX_FMC_Init();
   MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
-
-
 
   printf ("System initialized.\n");
 

@@ -31,10 +31,10 @@ SDRAM_TestStatus SDRAM_Test_Simple(void)
     
     // 验证数据
     if (read_value == write_value) {
-        printf("  简单读写测试: 通过 (地址:0x%08lX, 数据:0x%08lX)\n", test_addr, read_value);
+        printf("  简单读写测试: 通过 (地址:0x%08X, 数据:0x%08X)\n", test_addr, read_value);
         return SDRAM_TEST_OK;
     } else {
-        printf("  简单读写测试: 失败 (写入:0x%08lX, 读取:0x%08lX)\n", write_value, read_value);
+        printf("  简单读写测试: 失败 (写入:0x%08X, 读取:0x%08X)\n", write_value, read_value);
         return SDRAM_TEST_FAILED;
     }
 }
@@ -90,11 +90,11 @@ SDRAM_TestStatus SDRAM_Test_FullRange(void)
     uint32_t test_patterns[] = {0x00000000, 0xFFFFFFFF, 0x55555555, 0xAAAAAAAA};
     uint32_t pattern_count = sizeof(test_patterns) / sizeof(test_patterns[0]);
     
-    printf("开始全范围测试 (大小: %lu KB)...\n", SDRAM_TEST_SIZE / 1024);
+    printf("开始全范围测试 (大小: %d KB)...\n", SDRAM_TEST_SIZE / 1024);
     
     for (uint32_t i = 0; i < pattern_count; i++) {
         uint32_t pattern = test_patterns[i];
-        printf("  测试模式: 0x%08lX\n", pattern);
+        printf("  测试模式: 0x%08X\n", pattern);
         
         // 填充内存
         printf("    填充内存...\n");
@@ -103,7 +103,7 @@ SDRAM_TestStatus SDRAM_Test_FullRange(void)
         // 验证内存
         printf("    验证内存...\n");
         if (SDRAM_VerifyMemory(SDRAM_TEST_START_ADDR, SDRAM_TEST_SIZE, pattern) != SDRAM_TEST_OK) {
-            printf("  全范围测试: 失败 (模式:0x%08lX)\n", pattern);
+            printf("  全范围测试: 失败 (模式:0x%08X)\n", pattern);
             return SDRAM_TEST_FAILED;
         }
     }
@@ -138,7 +138,7 @@ SDRAM_TestStatus SDRAM_Test_AddressBus(void)
     // 检查所有地址位
     for (offset = sizeof(uint32_t); (offset & addressMask) != 0; offset <<= 1) {
         if (*(volatile uint32_t *)(SDRAM_TEST_START_ADDR + offset) != pattern) {
-            printf("  地址线测试: 失败 (偏移:0x%08lX)\n", offset);
+            printf("  地址线测试: 失败 (偏移:0x%08X)\n", offset);
             return SDRAM_TEST_FAILED;
         }
     }
@@ -169,7 +169,7 @@ SDRAM_TestStatus SDRAM_Test_DataBus(void)
         *(volatile uint32_t *)SDRAM_TEST_START_ADDR = pattern;
         
         if (*(volatile uint32_t *)SDRAM_TEST_START_ADDR != pattern) {
-            printf("  数据线测试: 失败 (模式:0x%08lX)\n", pattern);
+            printf("  数据线测试: 失败 (模式:0x%08X)\n", pattern);
             return SDRAM_TEST_FAILED;
         }
     }
@@ -190,7 +190,7 @@ SDRAM_TestStatus SDRAM_Test_MarchingPattern(void)
     uint32_t *pAddr;
     uint32_t offset;
     
-    printf("开始行进模式测试 (测试大小: %lu KB)...\n", test_size / 1024);
+    printf("开始行进模式测试 (测试大小: %d KB)...\n", test_size / 1024);
     
     // Step 1: 写0 (向上)
     printf("  步骤1: 写入0...\n");
@@ -204,7 +204,7 @@ SDRAM_TestStatus SDRAM_Test_MarchingPattern(void)
     pAddr = (uint32_t *)SDRAM_TEST_START_ADDR;
     for (offset = 0; offset < test_size / 4; offset++) {
         if (*pAddr != 0x00000000) {
-            printf("  行进模式测试: 失败 (步骤2, 地址:0x%08lX)\n", (uint32_t)pAddr);
+            printf("  行进模式测试: 失败 (步骤2, 地址:0x%08X)\n", (uint32_t)pAddr);
             return SDRAM_TEST_FAILED;
         }
         *pAddr++ = 0xFFFFFFFF;
@@ -215,7 +215,7 @@ SDRAM_TestStatus SDRAM_Test_MarchingPattern(void)
     pAddr = (uint32_t *)SDRAM_TEST_START_ADDR;
     for (offset = 0; offset < test_size / 4; offset++) {
         if (*pAddr != 0xFFFFFFFF) {
-            printf("  行进模式测试: 失败 (步骤3, 地址:0x%08lX)\n", (uint32_t)pAddr);
+            printf("  行进模式测试: 失败 (步骤3, 地址:0x%08X)\n", (uint32_t)pAddr);
             return SDRAM_TEST_FAILED;
         }
         *pAddr++ = 0x00000000;
@@ -246,8 +246,8 @@ SDRAM_TestStatus SDRAM_Test_Comprehensive(void)
     printf("\n========================================\n");
     printf("       SDRAM 综合测试开始\n");
     printf("========================================\n");
-    printf("SDRAM 起始地址: 0x%08X\n", SDRAM_TEST_START_ADDR);
-    printf("SDRAM 大小: %lu MB\n", SDRAM_TEST_SIZE / (1024 * 1024));
+    printf("SDRAM 基地址: 0x%08X\n", SDRAM_TEST_START_ADDR);
+    printf("SDRAM 大小: %d MB\n", SDRAM_TEST_SIZE / (1024 * 1024));
     printf("========================================\n\n");
     
     // 测试1: 简单读写测试

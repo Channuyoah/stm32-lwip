@@ -36,7 +36,7 @@ ht_client_interrupt_task_motor_stop(ServerData *t) {
     }
   }
 
-  ht_client_task_send_frame (CFMC_INTERRUPT, CFMC_INTERRUPT_TASK_STOP + 0x80, (uint16_t)status, NULL, 0);
+  ht_client_task_send_frame (CFMC_INTERRUPT, CFMC_INTERRUPT_TASK_STOP + 0x80, (uint16_t)status, NULL, NULL);
 
   printf ("stop finish\n");
 

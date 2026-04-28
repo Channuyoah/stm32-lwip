@@ -5,8 +5,6 @@
 #include "cmsis_os2.h"
 #include "string.h"
 #include "main.h"
-#include "FreeRTOS.h"
-#include "task.h"
 
 /* UDP服务连接状态（是否被远程主机连接） */
 err_t udp_link_status = ERR_ABRT;

@@ -3,11 +3,9 @@
 #include "tim.h"
 #include "usart.h"
 #include "string.h"
-#include <stdio.h>
-#include <stdbool.h>
 
-__attribute__((section(".d3ram_adc1"))) uint32_t adc1_buffer[1024];
-__attribute__((section(".d3ram_adc3"))) uint16_t adc3_buffer[1024]; /* 半字 */
+__attribute__((at(0x38000000))) uint32_t adc1_buffer[1024];
+__attribute__((at(0x38001000))) uint16_t adc3_buffer[1024]; /* 半字 */
 
 static uint16_t app_adc1_buffer[1024];
 static uint16_t app_adc3_buffer[1024];

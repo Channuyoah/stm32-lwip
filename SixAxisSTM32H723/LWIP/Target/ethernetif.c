@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -33,7 +33,7 @@
 
 /* Within 'USER CODE' section, code will be kept by default at each generation */
 /* USER CODE BEGIN 0 */
-
+static uint32_t regvalue = 0;
 /* USER CODE END 0 */
 
 /* Private define ------------------------------------------------------------*/
@@ -109,8 +109,8 @@ ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT]; /* Ethernet Tx DMA Descriptor
 
 #elif defined ( __CC_ARM )  /* MDK ARM Compiler */
 
-ETH_DMADescTypeDef DMARxDscrTab[ETH_RX_DESC_CNT] __attribute__((section(".RxDescripSection"))); /* Ethernet Rx DMA Descriptors */
-ETH_DMADescTypeDef DMATxDscrTab[ETH_TX_DESC_CNT] __attribute__((section(".TxDescripSection")));   /* Ethernet Tx DMA Descriptors */
+__attribute__((at(0x30000000))) ETH_DMADescTypeDef  DMARxDscrTab[ETH_RX_DESC_CNT]; /* Ethernet Rx DMA Descriptors */
+__attribute__((at(0x30000080))) ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT]; /* Ethernet Tx DMA Descriptors */
 
 #elif defined ( __GNUC__ ) /* GNU Compiler */
 
@@ -281,6 +281,69 @@ static void low_level_init(struct netif *netif)
 /* USER CODE END OS_THREAD_NEW_CMSIS_RTOS_V2 */
 
 /* USER CODE BEGIN PHY_PRE_CONFIG */
+
+  /* 硬件复位PHY */
+  HAL_GPIO_WritePin(ETH_RESET_GPIO_Port, ETH_RESET_Pin, GPIO_PIN_RESET);
+  HAL_Delay(10);
+  HAL_GPIO_WritePin(ETH_RESET_GPIO_Port, ETH_RESET_Pin, GPIO_PIN_SET);
+  HAL_Delay(10);
+
+try:
+  /**
+   * @brief 读取寄存器，返回值小于零表示读取错误，大于等等于0读取成功
+   * 
+   */
+  if (ETH_PHY_IO_ReadReg (0, 0x00, &regvalue) >= 0) {
+
+    printf ("bcr_regvalue = 0x%04X\n", regvalue);
+
+    /* 检查是否正在软件复位，等待100ms，重新读取寄存器 */
+    if (regvalue & 0x8000) {
+      printf("PHY Reseting...\r\n");
+      osDelay (100);
+      goto try;
+    }
+
+  } else {
+    printf ("%s Error\n", __func__);
+    while(1);
+  }
+  
+   /* 读取并显示PHY ID */
+   uint32_t phyid1 = 0, phyid2 = 0;
+   if (ETH_PHY_IO_ReadReg(0, 0x02, &phyid1) >= 0 &&
+       ETH_PHY_IO_ReadReg(0, 0x03, &phyid2) >= 0) {
+     printf("PHY ID: 0x%04X%04X\r\n", phyid1, phyid2);
+   }
+  
+  //  /* 读取基本状态寄存器(0x01) */
+  //  uint32_t bsr = 0;
+  //  if (ETH_PHY_IO_ReadReg(0, 0x01, &bsr) >= 0) {
+  //    printf("BSR = 0x%04X\r\n", bsr);
+  //    printf("  Link Status: %s\r\n", (bsr & 0x04) ? "UP" : "DOWN");
+  //    printf("  AutoNeg Ability: %s\r\n", (bsr & 0x08) ? "Yes" : "No");
+  //    printf("  AutoNeg Complete: %s\r\n", (bsr & 0x20) ? "Done" : "Pending");
+  //  }
+  
+  //  /* 读取YT8512H特殊状态寄存器(0x11) */
+  //  uint32_t ssr = 0;
+  //  if (ETH_PHY_IO_ReadReg(0, 0x11, &ssr) >= 0) {
+  //    printf("SSR (0x11) = 0x%04X\r\n", ssr);
+  //    printf("  Link: %s\r\n", (ssr & 0x0400) ? "UP" : "DOWN");
+  //    uint32_t speed = (ssr >> 14) & 0x03;
+  //    printf("  Speed: %s\r\n", (speed == 1) ? "100M" : (speed == 0) ? "10M" : "Unknown");
+  //    printf("  Duplex: %s\r\n", (ssr & 0x2000) ? "Full" : "Half");
+  //  }
+  
+  // /* 如果自动协商未启用，强制启用 */
+  // if (!(regvalue & 0x1000)) {
+  //   printf("启用自动协商...\r\n");
+  //   regvalue |= 0x1000;  // 启用自动协商
+  //   regvalue |= 0x0200;  // 重启自动协商
+  //   ETH_PHY_IO_WriteReg(0, 0x00, regvalue);
+  //   osDelay(500);
+  // }
+
 
 /* USER CODE END PHY_PRE_CONFIG */
   /* Set PHY IO functions */
@@ -836,22 +899,24 @@ void ethernet_link_thread(void* argument)
     default:
       break;
     }
-
+		
     if(linkchanged)
     {
       /* Get MAC Config MAC */
-      HAL_ETH_GetMACConfig(&heth, &MACConf);
-      MACConf.DuplexMode = duplex;
-      MACConf.Speed = speed;
-      HAL_ETH_SetMACConfig(&heth, &MACConf);
-      HAL_ETH_Start_IT(&heth);
+     HAL_ETH_GetMACConfig(&heth, &MACConf);
+     MACConf.DuplexMode = duplex;
+     MACConf.Speed = speed;
+     HAL_ETH_SetMACConfig(&heth, &MACConf);
+     HAL_ETH_Start_IT(&heth);
+			if(HAL_ETH_Start_IT(&heth) != HAL_OK) {
+         printf("HAL_ETH_Start_IT failed!\r\n");
+      }
       netif_set_up(netif);
       netif_set_link_up(netif);
     }
   }
 
 /* USER CODE BEGIN ETH link Thread core code for User BSP */
-
 /* USER CODE END ETH link Thread core code for User BSP */
 
     osDelay(100);

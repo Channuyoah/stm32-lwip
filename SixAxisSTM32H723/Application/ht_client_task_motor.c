@@ -131,7 +131,7 @@ ht_client_motor_task_get_location(ServerData *t) {
 
   int8_t status = 0;
 
-  ht_client_task_send_frame (CFMC_MOTOR, CFMC_MOTOR_TASK_GET_MOTOR_POSITION + 0x80, (uint16_t)status, NULL, 0);
+  ht_client_task_send_frame (CFMC_MOTOR, CFMC_MOTOR_TASK_GET_MOTOR_POSITION + 0x80, (uint16_t)status, NULL, NULL);
 
   return status;
 }

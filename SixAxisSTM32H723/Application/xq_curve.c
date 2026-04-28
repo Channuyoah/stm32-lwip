@@ -3,8 +3,6 @@
 #include "usart.h"
 #include "string.h"
 #include "cmsis_os.h"
-#include <stdio.h>
-#include <stdbool.h>
 
 
 SCurve curve_pool[CURVE_POOL_SIZE];
