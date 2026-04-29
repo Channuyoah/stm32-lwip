@@ -201,8 +201,8 @@ void StartDefaultTask(void *argument)
   for(;;) {
 
     /* 流水输出测试OUT0 ~ OUT48 */
-			 xqIO_Output = (1ULL << chaser_pin);
-			 chaser_pin = (chaser_pin + 1) % CHASER_TOTAL;
+			//  xqIO_Output = (1ULL << chaser_pin);
+			//  chaser_pin = (chaser_pin + 1) % CHASER_TOTAL;
 
     /* 打印IO输入 */
     // printf("DI: 0x%02X\r\n", (unsigned int)(xqIO_Input >> 32));  // 只打印高32位的输入状态（TCA9535部分）
@@ -318,8 +318,8 @@ void StartDefaultTask(void *argument)
 // osDelay(1500);
 // printf (" RUNNING*** \r\n");
 // printf ("***************************\r\n");
-//    HAL_GPIO_TogglePin (SYS_RUN_GPIO_Port, SYS_RUN_Pin); 
-
+   HAL_GPIO_TogglePin (SYS_RUN_GPIO_Port, SYS_RUN_Pin); 
+   osDelay(1000);
   }
   /* USER CODE END StartDefaultTask */
 }
