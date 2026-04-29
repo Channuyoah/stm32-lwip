@@ -6891,6 +6891,11 @@
               <FileType>1</FileType>
               <FilePath>..\Application\xq_sdram.c</FilePath>
             </File>
+            <File>
+              <FileName>xq_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\xq_control.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -6980,6 +6985,11 @@
               <FileName>xq_modbus.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\FreeModbus\xq_modbus.c</FilePath>
+            </File>
+            <File>
+              <FileName>xq_reg_event.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\FreeModbus\xq_reg_event.c</FilePath>
             </File>
           </Files>
         </Group>

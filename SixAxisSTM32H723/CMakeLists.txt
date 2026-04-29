@@ -58,6 +58,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Application/xq_period_task.c
     Application/xq_pwm.c
     Application/xq_sdram.c
+    Application/xq_control.c
     Application/xq_utility.c
     FreeModbus/mb.c
     FreeModbus/mbcrc.c
@@ -76,6 +77,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     FreeModbus/porttcp.c
     FreeModbus/porttimer.c
     FreeModbus/xq_modbus.c
+    FreeModbus/xq_reg_event.c
 )
 
 # Add include paths

@@ -42,6 +42,8 @@
 #include "tim.h"
 #include "xq_sdram.h"
 #include "xq_axis_intp.h"
+#include "xq_reg_event.h"
+#include "xq_control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -73,7 +75,20 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+void xq_control_task(void *pvParameters) {
+    uint16_t addr;
+    for (;;) {
+        if (xQueueReceive(xq_reg_event_queue, &addr, portMAX_DELAY) == pdTRUE) {
+            int index = addr - REG_ADDR_MIN;
+            if (index >= 0 && index < REG_SLOT_COUNT) {
+                RegEventHandler_t handler = xq_reg_handler_table[index];
+                if (handler != NULL) {
+                    handler(addr);   // 执行槽函数
+                }
+            }
+        }
+    }
+}
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -138,31 +153,35 @@ void StartDefaultTask(void *argument)
   MX_LWIP_Init();
   /* USER CODE BEGIN StartDefaultTask */
 
- xq_axis_init();
+  xq_axis_init();
 
- ht_client_task_init();
+  ht_client_task_init();
 
- ht_udp_server_init();
+  ht_udp_server_init();
 
- XQ_TCA9535_Init_All();
+  XQ_TCA9535_Init_All();
 
- XQ_PeriodTask_Start();
+  XQ_PeriodTask_Start();
 
- XQ_Encoder_Start(1, -1, -1, -1, 1);
+  XQ_Encoder_Start(1, -1, -1, -1, 1);
 
- xq_modbus_tcp_task_init ();
+  xq_modbus_tcp_task_init ();
 
- XQ_setPWM(0, 0.5, 10.0, 5, 100);
- XQ_setPWM(1, 0.5, 10.0, 5, 100);
+  xq_reg_event_init();               // 创建队列
+  xq_register_all_handlers();        // 注册所有处理函数
+  xTaskCreate(xq_control_task, "Ctrl", 512, NULL, osPriorityHigh, NULL);
 
- XQ_StartADC (ADC_CHANNEL_DUAL_MODE);
- XQ_StartADC (ADC_CHANNEL_ADC3);
+  XQ_setPWM(0, 0.5, 10.0, 5, 100);
+  XQ_setPWM(1, 0.5, 10.0, 5, 100);
+
+  XQ_StartADC (ADC_CHANNEL_DUAL_MODE);
+  XQ_StartADC (ADC_CHANNEL_ADC3);
 //  
- // 初始化DAC (0-5V范围)
- XQ_DAC_Init(GP8403_RANGE_10V);
+  // 初始化DAC (0-5V范围)
+  XQ_DAC_Init(GP8403_RANGE_10V);
 
- // 设置初始输出电压
- XQ_SetDAC(GP8403_CHANNEL_BOTH, 3.1f);
+  // 设置初始输出电压
+  XQ_SetDAC(GP8403_CHANNEL_BOTH, 3.1f);
 
   /* 编码器绑定：编码器0 → 轴0，编码器一圈10000计数，电机一圈5000脉冲 */
   // XQ_Encoder_Bindto_Axis(AXIS_0, ENCODER_AXIS_0, 400, 5000, 20 * 5000, 50000, 50000, 5, 10);
@@ -277,14 +296,15 @@ void StartDefaultTask(void *argument)
     // printf ("\r\n");
     // printf ("t2t1 = %d\n", t2t1);
     
-XQ_ABSMove((AxisID)0, 1, 5, 30000, 2450, 5);
-osDelay(3000);
-XQ_ABSMove((AxisID)0, 5, 5, 30000, 2450, 5);
-osDelay(3000);
-XQ_ABSMove((AxisID)0, 10, 5, 30000, 2450, 5);
-osDelay(100);
-XQ_ABSMove((AxisID)0, 1, 5, 30000, 2450, 5);
-osDelay(100);
+// XQ_ABSMove((AxisID)0, 1, 5, 30000, 2450, 5);
+// osDelay(3000);
+// XQ_ABSMove((AxisID)0, 5, 5, 30000, 2450, 5);
+// osDelay(3000);
+// XQ_ABSMove((AxisID)0, 10, 5, 30000, 2450, 5);
+// osDelay(100);
+// XQ_ABSMove((AxisID)0, 1, 5, 30000, 2450, 5);
+// osDelay(100);
+
 // osDelay(500);
 // printf ("1*************** \r\n");
 // XQ_ABSMove((AxisID)1, 1, 5, 30000, 2450, 5);
@@ -299,15 +319,6 @@ osDelay(100);
 // printf (" RUNNING*** \r\n");
 // printf ("***************************\r\n");
 //    HAL_GPIO_TogglePin (SYS_RUN_GPIO_Port, SYS_RUN_Pin); 
-
-
-
-
-    // osDelay(500);
-
-    printf (" RUNNING*** \r\n");
-
-    HAL_GPIO_TogglePin (SYS_RUN_GPIO_Port, SYS_RUN_Pin); 
 
   }
   /* USER CODE END StartDefaultTask */

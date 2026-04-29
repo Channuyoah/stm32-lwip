@@ -1,4 +1,5 @@
 #include "xq_modbus.h"
+#include "xq_reg_event.h"
 #include <string.h>
 
 // ========== 物理数据缓存 ==========
@@ -44,15 +45,21 @@ eMBErrorCode eMBRegHoldingCB(UCHAR *pucRegBuffer, USHORT usAddress,
     if ((offset + usNRegs) > MB_HOLD_SIZE) {
         return MB_ENOREG;
     }
-    printf (" usRegHoldBuf[1]=%d \r\n", usRegHoldBuf[1]);
-    printf (" usRegHoldBuf[2]=%d \r\n", usRegHoldBuf[2]);
     if (eMode == MB_REG_WRITE) {
+        uint16_t startAddr = usAddress;
+        uint16_t count = usNRegs;
         // 写操作：将 pucRegBuffer 中数据(大端)复制到 usRegHoldBuf
         while (usNRegs > 0) {
             usRegHoldBuf[offset] = (pucRegBuffer[0] << 8) | pucRegBuffer[1];
             pucRegBuffer += 2;
             offset++;
             usNRegs--;
+        }
+        // 通知每一个写入的地址
+        for (uint16_t i = 0; i < count; i++) {
+            printf("-------------i:%d, addr=%d\r\n", i, startAddr + i);
+            printf("-------------Holding Reg Write: addr=%d, value=0x%X\r\n", startAddr + i, usRegHoldBuf[(startAddr + i) - MB_HOLD_START_ADDR]);
+            xq_reg_notify(startAddr + i);
         }
     } else {
         // 读操作：将 usRegHoldBuf 数据输出到 pucRegBuffer
@@ -79,6 +86,10 @@ eMBErrorCode eMBRegInputCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNRegs
         offset++;
         usNRegs--;
     }
+    // // 通知每个线圈地址
+    // for (int i = 0; i < usNCoils; i++) {
+    //     xq_reg_notify(usAddress + i);
+    // }
     return MB_ENOERR;
 }
 

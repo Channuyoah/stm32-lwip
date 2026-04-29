@@ -22,4 +22,8 @@ extern uint16_t usRegInputBuf[MB_INPUT_SIZE];
 #define MB_DISC_START_ADDR  1642
 #define MB_DISC_SIZE        32
 
+/* 工具函数：Modbus 寄存器 <-> float 互转 */
+float GetFloatFromReg(const uint16_t *reg);
+void SetFloatToReg(uint16_t *reg, float val);
+
 #endif
