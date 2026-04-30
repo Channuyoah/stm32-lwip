@@ -40,13 +40,13 @@ float GetFloatFromReg(const uint16_t *reg) {
 eMBErrorCode eMBRegHoldingCB(UCHAR *pucRegBuffer, USHORT usAddress,
                              USHORT usNRegs, eMBRegisterMode eMode)
 {
-    uint16_t offset = usAddress-1 - MB_HOLD_START_ADDR;
+    uint16_t offset = usAddress - MB_HOLD_START_ADDR - 1;
     // 地址范围检查
     if ((offset + usNRegs) > MB_HOLD_SIZE) {
         return MB_ENOREG;
     }
     if (eMode == MB_REG_WRITE) {
-        uint16_t startAddr = usAddress-1;
+        uint16_t startAddr = usAddress - 1;
         uint16_t count = usNRegs;
         // 写操作：将 pucRegBuffer 中数据(大端)复制到 usRegHoldBuf
         while (usNRegs > 0) {
@@ -62,7 +62,7 @@ eMBErrorCode eMBRegHoldingCB(UCHAR *pucRegBuffer, USHORT usAddress,
             xq_reg_notify(startAddr + i);
         }
     } else {
-        uint16_t startAddr = usAddress-1;
+        uint16_t startAddr = usAddress - 1;
         uint16_t count = usNRegs;
         // 读操作：将 usRegHoldBuf 数据输出到 pucRegBuffer
         while (usNRegs > 0) {
@@ -70,12 +70,6 @@ eMBErrorCode eMBRegHoldingCB(UCHAR *pucRegBuffer, USHORT usAddress,
             *pucRegBuffer++ = (UCHAR)(usRegHoldBuf[offset] & 0xFF);
             offset++;
             usNRegs--;
-                    // 通知每一个写入的地址
-        for (uint16_t i = 0; i < count; i++) {
-            printf("-------------i:%d, addr=%d\r\n", i, startAddr + i);
-            printf("-------------Holding Reg Read: addr=%d, value=0x%X\r\n", startAddr + i, usRegHoldBuf[(startAddr + i) - MB_HOLD_START_ADDR]);
-            xq_reg_notify(startAddr + i);
-        }
         }
     }
     return MB_ENOERR;

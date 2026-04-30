@@ -2,6 +2,7 @@
 #include "i2c.h"
 #include "usart.h"
 #include "cmsis_os2.h"
+#include "xq_modbus.h"
 #include <stdio.h>
 
 
@@ -600,8 +601,7 @@ uint8_t XQ_GetInputPin(XQ_InputPin_t pin)
 }
 
 
-void
-XQ_IO_Refresh_Task(void *argument) {
+void XQ_IO_Refresh_Task(void *argument) {
 
   HAL_StatusTypeDef status;
   uint64_t input_state = 0;
@@ -609,11 +609,17 @@ XQ_IO_Refresh_Task(void *argument) {
   
   for(;;) {
 
+    printf("IO Refresh Task running...\r\n");
     /* 检查TCA9535中断引脚是否变为低电平（输入发生变化） */
     int1_state = HAL_GPIO_ReadPin(TCA9535_INPUT_1_GPIO_Port, TCA9535_INPUT_1_Pin);
     int2_state = HAL_GPIO_ReadPin(TCA9535_INPUT_2_GPIO_Port, TCA9535_INPUT_2_Pin);
     int3_state = HAL_GPIO_ReadPin(TCA9535_INPUT_3_GPIO_Port, TCA9535_INPUT_3_Pin);
 
+    // TODO: 这里是32位输入状态的更新，需要测试超出32的输入
+    // 把输入状态写入保持寄存器（DI只读区）
+    usRegHoldBuf[1642 - MB_HOLD_START_ADDR] = (uint16_t)(xqIO_Input & 0xFFFF);        // DI低16位
+    usRegHoldBuf[1643 - MB_HOLD_START_ADDR] = (uint16_t)((xqIO_Input >> 16) & 0xFFFF); // DI高16位
+    printf("----DI updated: 0x%016llX\r\n", xqIO_Input);
     /* 如果任一中断引脚为低电平，说明输入状态发生变化 */
     if (int1_state == GPIO_PIN_RESET || int2_state == GPIO_PIN_RESET || int3_state == GPIO_PIN_RESET) {
       /* 读取所有输入状态（读取操作会自动清除中断） */
