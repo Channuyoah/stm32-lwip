@@ -3,6 +3,11 @@
 
 #include "main.h"
 #include "lptim.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+/* 周期性任务相关函数和变量声明 */
+extern TaskHandle_t xAnalogRefreshTaskHandle;
 
 /**
  * @brief 启动周期性任务
@@ -20,5 +25,10 @@ HAL_StatusTypeDef XQ_PeriodTask_Start(void);
  */
 void XQ_PeriodTask_Callback(void);
 
+/**
+ * @brief 模拟输入刷新任务
+ * @note 等待 200us 定时器通知，然后执行一次刷新
+ */
+void xq_Analog_Refresh_Task(void *argument);
 
 #endif // !__XQ_PERIOD_TASK_H__

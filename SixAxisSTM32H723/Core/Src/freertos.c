@@ -176,7 +176,11 @@ void StartDefaultTask(void *argument)
 
   XQ_StartADC (ADC_CHANNEL_DUAL_MODE);
   XQ_StartADC (ADC_CHANNEL_ADC3);
-//  
+
+  // 创建模拟刷新任务
+  xTaskCreate(xq_Analog_Refresh_Task, "AnalogRfrsh", 512, NULL,
+              osPriorityNormal, &xAnalogRefreshTaskHandle);
+
   // 初始化DAC (0-5V范围)
   XQ_DAC_Init(GP8403_RANGE_10V);
 
@@ -305,21 +309,8 @@ void StartDefaultTask(void *argument)
 // XQ_ABSMove((AxisID)0, 1, 5, 30000, 2450, 5);
 // osDelay(100);
 
-// osDelay(500);
-// printf ("1*************** \r\n");
-// XQ_ABSMove((AxisID)1, 1, 5, 30000, 2450, 5);
-// printf ("2*************** \r\n");
-// osDelay(1500);
-// XQ_ABSMove((AxisID)0, 0, 5, 30000, 2450, 5);
-// osDelay(500);
-// printf ("3*************** \r\n");
-// XQ_ABSMove((AxisID)1, 0, 5, 30000, 2450, 5);
-// printf ("4*************** \r\n");
-// osDelay(1500);
-// printf (" RUNNING*** \r\n");
-// printf ("***************************\r\n");
-   HAL_GPIO_TogglePin (SYS_RUN_GPIO_Port, SYS_RUN_Pin); 
-   osDelay(1000);
+    HAL_GPIO_TogglePin (SYS_RUN_GPIO_Port, SYS_RUN_Pin); 
+    osDelay(1000);
   }
   /* USER CODE END StartDefaultTask */
 }

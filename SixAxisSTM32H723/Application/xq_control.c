@@ -6,10 +6,10 @@
 
 
 //待处理逻辑：
-//数字输出：xqIO_Output
-//数字输入：xqIO_Input
-//模拟输出：XQ_SetDAC(GP8403_CHANNEL_BOTH, 3.1f);
-//模拟输入：XQ_GetADC(uint8_t cn, float_t *Volt, uint16_t num);
+//数字输出：xqIO_Output     √
+//数字输入：xqIO_Input      √
+//模拟输出：XQ_SetDAC(GP8403_CHANNEL_BOTH, 3.1f);       √
+//模拟输入：XQ_GetADC(uint8_t cn, float_t *Volt, uint16_t num);     √
 //PWM输出：XQ_setPWM(0, 0.5, 10.0, 5, 100);
 
 

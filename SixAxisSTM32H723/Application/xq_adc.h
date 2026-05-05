@@ -38,5 +38,7 @@ HAL_StatusTypeDef XQ_StartADC(uint8_t cn);
  */
 HAL_StatusTypeDef XQ_StopADC(uint8_t cn);
 
+extern volatile uint8_t adc1_running;
+extern volatile uint8_t adc3_running;
 
 #endif // !__XQ_ADC_H__

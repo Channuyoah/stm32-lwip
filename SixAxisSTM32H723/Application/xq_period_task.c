@@ -2,7 +2,12 @@
 #include "usart.h"
 #include "xq_encoder.h"
 #include "xq_axis.h"
+#include "xq_adc.h"
+#include "xq_modbus.h"
 #include <stdlib.h>
+
+// 任务句柄，用于发通知
+TaskHandle_t xAnalogRefreshTaskHandle = NULL;
 
 /**
  * @brief 启动周期性任务
@@ -72,7 +77,75 @@ void XQ_PeriodTask_Callback(void)
   //   // XQ_JogMove(AXIS_0, random_speed, 2.0f, 20.0f, 5);
   //   XQ_ABSMove(AXIS_0, counter_if, random_speed, 2.0f, 20.0f, 5);
   // }
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
+  // 向模拟刷新任务发送通知
+  if (xAnalogRefreshTaskHandle != NULL) {
+      xTaskNotifyFromISR(xAnalogRefreshTaskHandle, 0x01, eSetBits, &xHigherPriorityTaskWoken);
+  }
+
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+/**
+ * @brief 模拟输入刷新任务
+ * @note 等待 200us 定时器通知，然后执行一次刷新
+ */
+void xq_Analog_Refresh_Task(void *argument)
+{
+    for (;;) {
+        uint32_t ulNotifiedValue;
 
+        // 等待通知，最大等待 500ms（防止中断出问题时任务永远卡死）
+        BaseType_t result = xTaskNotifyWait(0, 0xFFFFFFFF, &ulNotifiedValue, pdMS_TO_TICKS(500));
+
+        // 收到通知或超时后都执行一次刷新
+        if (result == pdTRUE || ulNotifiedValue == 0) {
+            xq_refresh_analog_inputs();
+        }
+    }
+}
+
+/**
+ * @brief 刷新模拟输入数据
+ * @note 从ADC获取最新的模拟输入值，并更新到Modbus寄存器中
+ */
+void xq_refresh_analog_inputs(void)
+{
+
+    static uint32_t call_count = 0;
+    float_t buf[100];
+
+    // 模拟输入1 (1664) – 来自 ADC1+ADC2 双模式
+    if (adc1_running) {
+        if (XQ_GetADC(ADC_CHANNEL_DUAL_MODE, buf, 100) == HAL_OK) {
+            float sum = 0.0f;
+            for (int i = 0; i < 50; i++) {
+                sum += buf[i * 2];   // ADC1 数据
+            }
+            float ai1 = sum / 50.0f;
+            SetFloatToReg(&usRegHoldBuf[1664 - MB_HOLD_START_ADDR], ai1);
+
+            if ((call_count % 100) == 0) {
+              printf("AI1 = %.3f V\r\n", ai1);
+            }
+        }
+    }
+
+    // 模拟输入2 (1666) – 来自 ADC3
+    if (adc3_running) {
+        if (XQ_GetADC(ADC_CHANNEL_ADC3, buf, 100) == HAL_OK) {
+            float sum = 0.0f;
+            for (int i = 0; i < 100; i++) {
+                sum += buf[i];
+            }
+            float ai2 = sum / 100.0f;
+            SetFloatToReg(&usRegHoldBuf[1666 - MB_HOLD_START_ADDR], ai2);
+
+            if ((call_count % 100) == 0) {
+              printf("AI2 = %.3f V\r\n", ai2);
+            }
+        }
+    }
+    call_count++;
+}

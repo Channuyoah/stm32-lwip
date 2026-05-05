@@ -10,8 +10,8 @@ __attribute__((at(0x38001000))) uint16_t adc3_buffer[1024]; /* 半字 */
 static uint16_t app_adc1_buffer[1024];
 static uint16_t app_adc3_buffer[1024];
 
-static volatile uint8_t adc1_running = 0;  // ADC运行状态: 0=停止, 1=运行
-static volatile uint8_t adc3_running = 0;  // ADC运行状态: 0=停止, 1=运行
+volatile uint8_t adc1_running = 0;  // ADC运行状态: 0=停止, 1=运行
+volatile uint8_t adc3_running = 0;  // ADC运行状态: 0=停止, 1=运行
 
 /* 最近2次高电平历史，[0]=最近一次                                                          */
 /* pwm_high_offset_us[i]   : 上升沿距 ADC 窗口起点的时间(us)                               */
