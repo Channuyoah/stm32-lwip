@@ -171,6 +171,15 @@ struct _XQ_SetAxisPara {
   /* 电机方向IO控制 */
   GPIO_TypeDef *DIR_GPIO_Port;
   uint16_t DIR_GPIO_Pin;
+
+  /* 限位/原点配置 */
+  struct {
+    uint8_t limit_pos;      // 正限位 DI 位号，0~47，0xFF=未配置
+    uint8_t limit_neg;      // 负限位 DI 位号，0~47，0xFF=未配置
+    uint8_t home;           // 原点 DI 位号，0~47，0xFF=未配置
+    uint8_t homing;         // 回零状态：0=空闲，1=回零中，2=完成
+    uint16_t home_speed;    // 回零速度（mm/s）
+  } limit_cfg;
 };
 
 

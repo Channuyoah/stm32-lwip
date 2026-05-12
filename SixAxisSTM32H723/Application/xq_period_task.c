@@ -93,6 +93,9 @@ void XQ_PeriodTask_Callback(void)
  */
 void xq_Analog_Refresh_Task(void *argument)
 {
+    const uint32_t AXIS_STATUS_INTERVAL = 10;   // 10次通知 = 2ms
+    uint32_t count = 0;
+
     for (;;) {
         uint32_t ulNotifiedValue;
 
@@ -101,7 +104,14 @@ void xq_Analog_Refresh_Task(void *argument)
 
         // 收到通知或超时后都执行一次刷新
         if (result == pdTRUE || ulNotifiedValue == 0) {
+            // 刷新模拟输入
             xq_refresh_analog_inputs();
+
+            // 每AXIS_STATUS_INTERVAL次刷新一次轴状态
+            if (++count >= AXIS_STATUS_INTERVAL) {
+                count = 0;
+                xq_update_axis_status();
+            }
         }
     }
 }
@@ -124,7 +134,7 @@ void xq_refresh_analog_inputs(void)
                 sum += buf[i * 2];   // ADC1 数据
             }
             float ai1 = sum / 50.0f;
-            SetFloatToReg(&usRegHoldBuf[1664 - MB_HOLD_START_ADDR], ai1);
+            SetFloatToReg(&usRegInputBuf[REG_AI1_ADDR - MB_INPUT_START_ADDR], ai1);
 
             if ((call_count % 100) == 0) {
               printf("AI1 = %.3f V\r\n", ai1);
@@ -140,7 +150,7 @@ void xq_refresh_analog_inputs(void)
                 sum += buf[i];
             }
             float ai2 = sum / 100.0f;
-            SetFloatToReg(&usRegHoldBuf[1666 - MB_HOLD_START_ADDR], ai2);
+            SetFloatToReg(&usRegInputBuf[REG_AI2_ADDR - MB_INPUT_START_ADDR], ai2);
 
             if ((call_count % 100) == 0) {
               printf("AI2 = %.3f V\r\n", ai2);

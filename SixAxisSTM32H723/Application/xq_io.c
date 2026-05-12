@@ -609,7 +609,6 @@ void XQ_IO_Refresh_Task(void *argument) {
   
   for(;;) {
 
-    printf("IO Refresh Task running...\r\n");
     /* 检查TCA9535中断引脚是否变为低电平（输入发生变化） */
     int1_state = HAL_GPIO_ReadPin(TCA9535_INPUT_1_GPIO_Port, TCA9535_INPUT_1_Pin);
     int2_state = HAL_GPIO_ReadPin(TCA9535_INPUT_2_GPIO_Port, TCA9535_INPUT_2_Pin);
@@ -619,7 +618,6 @@ void XQ_IO_Refresh_Task(void *argument) {
     // 把输入状态写入保持寄存器（DI只读区）
     usRegHoldBuf[1642 - MB_HOLD_START_ADDR] = (uint16_t)(xqIO_Input & 0xFFFF);        // DI低16位
     usRegHoldBuf[1643 - MB_HOLD_START_ADDR] = (uint16_t)((xqIO_Input >> 16) & 0xFFFF); // DI高16位
-    printf("----DI updated: 0x%016llX\r\n", xqIO_Input);
     /* 如果任一中断引脚为低电平，说明输入状态发生变化 */
     if (int1_state == GPIO_PIN_RESET || int2_state == GPIO_PIN_RESET || int3_state == GPIO_PIN_RESET) {
       /* 读取所有输入状态（读取操作会自动清除中断） */

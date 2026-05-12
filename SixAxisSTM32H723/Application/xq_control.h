@@ -11,6 +11,8 @@ extern "C" {
  */
 void xq_register_all_handlers(void);
 
+void xq_update_axis_status(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -24,146 +24,207 @@
 //读当前位置
 
 
-// 处理“32路DO输出”（保持寄存器地址 1644）
-static void on_DO32_Output(uint16_t addr) {
-    uint16_t val = usRegHoldBuf[addr - MB_HOLD_START_ADDR];
-    printf("------DO32 changed, addr=%d, value=0x%X\r\n", addr, val);
-    // 实际刷新 IO 的代码放在这里
-    xqIO_Output = usRegHoldBuf[addr - MB_HOLD_START_ADDR];
+/* ========== 数字输出 ========== */
+static void on_DO32_Output(uint16_t addr)
+{
+    (void)addr;
+    uint16_t val = usRegHoldBuf[REG_DO32_ADDR - MB_HOLD_START_ADDR];
+    printf("DO32 changed, value=0x%X\r\n", val);
+    xqIO_Output = val;
 }
 
-// 处理“模拟输出AO1”（保持寄存器地址 1660）
-static void on_AO1_Set(uint16_t addr) {
-    uint16_t offset = addr - MB_HOLD_START_ADDR;
-    float voltage = GetFloatFromReg(&usRegHoldBuf[offset]);
+/* ========== 模拟输出 ========== */
+static void on_AO1_Set(uint16_t addr)
+{
+    (void)addr;
+    float voltage = GetFloatFromReg(&usRegHoldBuf[REG_AO1_ADDR - MB_HOLD_START_ADDR]);
     printf("AO1 set to %.3f V\r\n", voltage);
     XQ_SetDAC(GP8403_CHANNEL_0, voltage);
 }
 
-// 处理“模拟输出AO2”（保持寄存器地址 1662）
-static void on_AO2_Set(uint16_t addr) {
-    uint16_t offset = addr - MB_HOLD_START_ADDR;
-    float voltage = GetFloatFromReg(&usRegHoldBuf[offset]);
+static void on_AO2_Set(uint16_t addr)
+{
+    (void)addr;
+    float voltage = GetFloatFromReg(&usRegHoldBuf[REG_AO2_ADDR - MB_HOLD_START_ADDR]);
     printf("AO2 set to %.3f V\r\n", voltage);
     XQ_SetDAC(GP8403_CHANNEL_1, voltage);
 }
 
-// PWM0 参数变化时调用（1670 或 1671 被写时触发）
+/* ========== PWM 输出 ========== */
 static void on_PWM0_Update(uint16_t addr)
 {
-    (void)addr;  // 不需要关心具体是哪个地址
-
-    // 从保持寄存器读取当前的两个参数
-    uint16_t ton_permille = usRegHoldBuf[1670 - MB_HOLD_START_ADDR];   // 占空比千分比
-    uint16_t period_us    = usRegHoldBuf[1671 - MB_HOLD_START_ADDR];   // 周期 μs
-
-    // 转换
-    float ton = ton_permille / 1000.0f;
-    if (ton > 1.0f) ton = 1.0f;
-
-    float T = (period_us > 0) ? (float)period_us : 100.0f;   // 默认 100μs
-
-    // 调用 PWM 设置（连续模式：T_count=0, idle_T 随便填但不生效）
-    XQ_setPWM(0, ton, T, 0, 0.0f);
-
-    printf("PWM0: ton=%.3f, T=%.1f us\r\n", ton, T);
-}
-
-// PWM1 （用 1672、1673）
-static void on_PWM1_Update(uint16_t addr)
-{
-    uint16_t ton_permille = usRegHoldBuf[1672 - MB_HOLD_START_ADDR];
-    uint16_t period_us    = usRegHoldBuf[1673 - MB_HOLD_START_ADDR];
+    (void)addr;
+    uint16_t ton_permille = usRegHoldBuf[REG_PWM_CH0_TON    - MB_HOLD_START_ADDR];
+    uint16_t period_us    = usRegHoldBuf[REG_PWM_CH0_PERIOD - MB_HOLD_START_ADDR];
+    uint16_t burst_count  = usRegHoldBuf[REG_PWM_CH0_COUNT  - MB_HOLD_START_ADDR];
+    uint16_t idle_us      = usRegHoldBuf[REG_PWM_CH0_IDLE   - MB_HOLD_START_ADDR];
 
     float ton = ton_permille / 1000.0f;
     if (ton > 1.0f) ton = 1.0f;
     float T = (period_us > 0) ? (float)period_us : 100.0f;
+    float idle_T = (idle_us > 0) ? (float)idle_us : 0.2f;
 
-    XQ_setPWM(1, ton, T, 0, 0.0f);
-    printf("PWM1: ton=%.3f, T=%.1f us\r\n", ton, T);
+    XQ_setPWM(0, ton, T, burst_count, idle_T);
+    printf("PWM0: ton=%.3f, T=%.1f us, burst=%d, idle=%.1f us\r\n",
+           ton, T, burst_count, idle_T);
 }
 
-// 处理轴控制命令（1652-1655）
-static void on_axis_execute(uint16_t addr)
+static void on_PWM1_Update(uint16_t addr)
 {
-    // 读取轴号
-    int16_t axis_id = (int16_t)usRegHoldBuf[1655 - MB_HOLD_START_ADDR];
-    if (axis_id < 0 || axis_id >= AXIS_SUM) {
-        printf("Invalid axis ID: %d\r\n", axis_id);
-        return;
+    (void)addr;
+    uint16_t ton_permille = usRegHoldBuf[REG_PWM_CH1_TON    - MB_HOLD_START_ADDR];
+    uint16_t period_us    = usRegHoldBuf[REG_PWM_CH1_PERIOD - MB_HOLD_START_ADDR];
+    uint16_t burst_count  = usRegHoldBuf[REG_PWM_CH1_COUNT  - MB_HOLD_START_ADDR];
+    uint16_t idle_us      = usRegHoldBuf[REG_PWM_CH1_IDLE   - MB_HOLD_START_ADDR];
+
+    float ton = ton_permille / 1000.0f;
+    if (ton > 1.0f) ton = 1.0f;
+    float T = (period_us > 0) ? (float)period_us : 100.0f;
+    float idle_T = (idle_us > 0) ? (float)idle_us : 0.2f;
+
+    XQ_setPWM(1, ton, T, burst_count, idle_T);
+    printf("PWM1: ton=%.3f, T=%.1f us, burst=%d, idle=%.1f us\r\n",
+           ton, T, burst_count, idle_T);
+}
+
+/* ========== 轴限位配置 ========== */
+static void on_limit_cfg_changed(uint16_t addr)
+{
+    // 通过地址反算轴号和配置项
+    int offset = addr - REG_AXIS_LIMIT_BASE;
+    int axis_id = offset / REG_AXIS_LIMIT_STRIDE;
+    int item = offset % REG_AXIS_LIMIT_STRIDE;
+
+    if (axis_id < 0 || axis_id >= AXIS_SUM) return;
+
+    uint16_t val = usRegHoldBuf[addr - MB_HOLD_START_ADDR];
+    uint8_t bit = (val > 47) ? 0xFF : (uint8_t)val;
+
+    switch (item) {
+        case REG_AXIS_LIMIT_OFF_POS:
+            axis[axis_id].limit_cfg.limit_pos = bit;
+            printf("Axis %d: pos limit -> DI_%d\r\n", axis_id, bit);
+            break;
+        case REG_AXIS_LIMIT_OFF_NEG:
+            axis[axis_id].limit_cfg.limit_neg = bit;
+            printf("Axis %d: neg limit -> DI_%d\r\n", axis_id, bit);
+            break;
+        case REG_AXIS_LIMIT_OFF_HOME:
+            axis[axis_id].limit_cfg.home = bit;
+            printf("Axis %d: home -> DI_%d\r\n", axis_id, bit);
+            break;
     }
+}
 
-    // 读取该轴的运动模式（1680 + axis_id）
-    uint16_t mode_addr = 1680 + axis_id;
-    int16_t mode = (int16_t)usRegHoldBuf[mode_addr - MB_HOLD_START_ADDR];
-    if (mode < 1 || mode > 2) {
-        printf("Invalid mode: %d (1=ABS, 2=JOG)\r\n", mode);
-        return;
-    }
+/* ========== 轴运动命令执行 ========== */
+static void on_axis_cmd_execute(uint16_t addr)
+{
+    // 通过地址反算轴号
+    int offset = addr - REG_AXIS_CMD_BASE;
+    int axis_id = offset / REG_AXIS_CMD_STRIDE;
+    int item = offset % REG_AXIS_CMD_STRIDE;
 
-    float target_pos = GetFloatFromReg(&usRegHoldBuf[1652 - MB_HOLD_START_ADDR]);
+    if (axis_id < 0 || axis_id >= AXIS_SUM) return;
 
-    // 读取速度（int16 → float mm/s）
-    int16_t speed_raw = (int16_t)usRegHoldBuf[1654 - MB_HOLD_START_ADDR];
+    // 读取该轴的三个参数
+    uint16_t base = REG_AXIS_CMD_BASE + axis_id * REG_AXIS_CMD_STRIDE;
+
+    float target_pos = GetFloatFromReg(&usRegHoldBuf[base - MB_HOLD_START_ADDR + REG_AXIS_CMD_OFF_POS]);
+    int16_t speed_raw = (int16_t)usRegHoldBuf[base - MB_HOLD_START_ADDR + REG_AXIS_CMD_OFF_SPEED];
     float speed = (float)speed_raw;
+    int16_t mode = (int16_t)usRegHoldBuf[base - MB_HOLD_START_ADDR + REG_AXIS_CMD_OFF_MODE];
 
-    printf("Axis command: id=%d, mode=%d, pos=%.3f, speed=%.1f\r\n",
+    printf("Axis %d cmd: mode=%d, pos=%.3f, speed=%.1f\r\n",
            axis_id, mode, target_pos, speed);
 
-    if (mode == 1) {
-        // ABS 绝对运动，其余参数固定为 30000,2450,5
-        XQ_ABSMove((AxisID)axis_id, target_pos, speed, 30000.0f, 2450.0f, 5);
-    } else if (mode == 2) {
-        // JOG 点动，速度符号控制方向
-        XQ_JogMove((AxisID)axis_id, speed, 30000.0f, 2450.0f, 5);
-    }
-    // 后续可加 mode == 3 回零，mode == 4 插补...
-}
-
-// 处理“停止轴运动”（1298）
-static void on_axis_stop(uint16_t addr) {
-    // 1298 的低字节是轴号，高字节是停止模式（0=平滑，1=急停）
-    uint16_t val = usRegHoldBuf[1298 - MB_HOLD_START_ADDR];
-    int16_t axis_id = val & 0xFF;
-    uint8_t emg = (val >> 8) & 0x01;   // 0=平滑减速，1=急停
-
-    if (axis_id >= 0 && axis_id < AXIS_SUM) {
-        XQ_Stop((AxisID)axis_id, emg, 30000.0f, 2450.0f, 5);
-        printf("Axis %d stop (EMG=%d)\r\n", axis_id, emg);
+    switch (mode) {
+        case 0: // 停止
+            XQ_Stop((AxisID)axis_id, false, 30000.0f, 2450.0f, 5);
+            break;
+        case 1: // ABS 绝对运动
+            XQ_ABSMove((AxisID)axis_id, target_pos, speed, 30000.0f, 2450.0f, 5);
+            break;
+        case 2: // JOG 点动
+            XQ_JogMove((AxisID)axis_id, speed, 30000.0f, 2450.0f, 5);
+            break;
+        case 3: // 回零（预留）
+            // XQ_Home((AxisID)axis_id, speed, 30000.0f, 2450.0f, 5);
+            printf("Axis %d: Home mode not implemented yet\r\n", axis_id);
+            break;
+        default:
+            printf("Axis %d: Invalid mode %d\r\n", axis_id, mode);
+            break;
     }
 }
 
-// 读取当前位置
-    
+/* ========== 轴状态刷新（供周期任务调用） ========== */
+void xq_update_axis_status(void)
+{
+    for (int i = 0; i < AXIS_SUM; i++) {
+        uint16_t base = REG_AXIS_STATUS_BASE + i * REG_AXIS_STATUS_STRIDE;
 
+        // 轴号
+        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_ID] = i;
 
-// // 示例2：处理“设置规划位置”（1652）
-// static void on_set_plan_pos(uint16_t addr) {
-//     // addr 1652 和 1653 组成 float，这里简单打印
-//     float pos = GetFloatFromReg(&usRegHoldBuf[addr - MB_HOLD_START_ADDR]);
-//     printf("Plan position set: %.3f\r\n", pos);
-// }
+        // 运动状态
+        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_MOVING] = axis[i].is_moving;
 
-// // 示例3：处理“Axis使能”（1292）
-// static void on_axis_enable(uint16_t addr) {
-//     uint16_t val = usRegHoldBuf[addr - MB_HOLD_START_ADDR];
-//     printf("Axis enable cmd, addr=%d, val=%d\r\n", addr, val);
-// }
+        // 当前位置 (float, mm)
+        float cur_pos = (float)axis[i].position * axis[i].pitch / axis[i].microsteps;
+        SetFloatToReg(&usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_CURPOS], cur_pos);
 
-// 在初始化时注册所有需要响应的地址
-void xq_register_all_handlers(void) {
-    xq_reg_register_handler(1298, on_axis_stop);
-    xq_reg_register_handler(1644, on_DO32_Output);
-    xq_reg_register_handler(1655, on_axis_execute);// 轴控制命令：写入轴号时触发
-    xq_reg_register_handler(1660, on_AO1_Set);
-    xq_reg_register_handler(1662, on_AO2_Set);
-    // xq_reg_register_handler(1652, on_set_plan_pos);
-    // xq_reg_register_handler(1292, on_axis_enable);
+        // 目标位置 (float, mm) — 需要从命令区同步过来，这里简单留空或读命令区
+        // 也可以不填，上位机直接读命令区
 
-    // PWM0：1670 和 1671 任一被写，都触发 on_PWM0_Update
-    xq_reg_register_handler(1670, on_PWM0_Update);
-    xq_reg_register_handler(1671, on_PWM0_Update);
-    // PWM1：1672 和 1673
-    xq_reg_register_handler(1672, on_PWM1_Update);
-    xq_reg_register_handler(1673, on_PWM1_Update);
+        // 当前速度 (int16, mm/s)
+        // 需从轴结构体获取实际速度，暂时填0
+        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_SPEED] = 0;
+
+        // 限位触发状态
+        uint16_t limit_state = 0;
+        uint8_t pos_bit = axis[i].limit_cfg.limit_pos;
+        uint8_t neg_bit = axis[i].limit_cfg.limit_neg;
+        uint8_t home_bit = axis[i].limit_cfg.home;
+        if (pos_bit < 48 && (xqIO_Input & (1ULL << pos_bit))) limit_state |= 0x01;
+        if (neg_bit < 48 && (xqIO_Input & (1ULL << neg_bit))) limit_state |= 0x02;
+        if (home_bit < 48 && (xqIO_Input & (1ULL << home_bit))) limit_state |= 0x04;
+        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_LIMIT] = limit_state;
+
+        // 回零状态
+        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_HOMING] = axis[i].limit_cfg.homing;
+    }
+}
+
+/* ========== 注册所有处理函数 ========== */
+void xq_register_all_handlers(void)
+{
+    // ---- 数字输出 ----
+    xq_reg_register_handler(REG_DO32_ADDR, on_DO32_Output);
+
+    // ---- 模拟输出 ----
+    xq_reg_register_handler(REG_AO1_ADDR, on_AO1_Set);
+    xq_reg_register_handler(REG_AO2_ADDR, on_AO2_Set);
+
+    // ---- PWM ----
+    for (int addr = REG_PWM_BASE; addr < REG_PWM_BASE + 8; addr++) {
+        if (addr <= REG_PWM_CH0_IDLE)
+            xq_reg_register_handler(addr, on_PWM0_Update);
+        else
+            xq_reg_register_handler(addr, on_PWM1_Update);
+    }
+
+    // ---- 轴限位配置 ----
+    for (int i = 0; i < AXIS_SUM; i++) {
+        uint16_t base = REG_AXIS_LIMIT_BASE + i * REG_AXIS_LIMIT_STRIDE;
+        xq_reg_register_handler(base + REG_AXIS_LIMIT_OFF_POS,  on_limit_cfg_changed);
+        xq_reg_register_handler(base + REG_AXIS_LIMIT_OFF_NEG,  on_limit_cfg_changed);
+        xq_reg_register_handler(base + REG_AXIS_LIMIT_OFF_HOME, on_limit_cfg_changed);
+    }
+
+    // ---- 轴运动命令 ----
+    for (int i = 0; i < AXIS_SUM; i++) {
+        uint16_t base = REG_AXIS_CMD_BASE + i * REG_AXIS_CMD_STRIDE;
+        xq_reg_register_handler(base + REG_AXIS_CMD_OFF_SPEED, on_axis_cmd_execute); // 速度触发
+        xq_reg_register_handler(base + REG_AXIS_CMD_OFF_MODE,  on_axis_cmd_execute); // 模式触发
+    }
 }

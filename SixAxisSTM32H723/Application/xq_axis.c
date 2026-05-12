@@ -1538,6 +1538,13 @@ xq_axis_init(void) {
       HAL_NVIC_SetPriority(TIM8_UP_TIM13_IRQn, 2, 0);
       HAL_NVIC_EnableIRQ(TIM8_UP_TIM13_IRQn);
     }
+
+    // 新增：限位配置默认值
+    axis[i].limit_cfg.limit_pos = 0xFF;
+    axis[i].limit_cfg.limit_neg = 0xFF;
+    axis[i].limit_cfg.home      = 0xFF;
+    axis[i].limit_cfg.homing    = 0;
+    axis[i].limit_cfg.home_speed = 5;   // 默认 5 mm/s
   }
 }
 
@@ -1678,7 +1685,8 @@ XQ_JogMove (AxisID id, float_t speed, float_t jerk, float_t a_max, uint32_t time
  */
 int8_t
 XQ_ABSMove (AxisID id, float_t target_position, float_t max_speed, float_t jerk, float_t a_max, uint32_t time_factor) {
-
+  printf("------------run absmove------------\r\n");
+  printf("ABS: cur_pos=%d, target_pos=%d, dir=%d\r\n", axis[id].position, lroundf(target_position * axis[id].microsteps / axis[id].pitch), xq_axis_read_dir(id));
   XQ_Encoder_Sync_Position(id);
   XQ_Encoder_Notify_External_Move(id);
 
