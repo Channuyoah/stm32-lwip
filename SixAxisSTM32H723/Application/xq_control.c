@@ -93,14 +93,14 @@ static void on_axis_execute(uint16_t addr)
         return;
     }
 
-    // 读取运动模式
-    int16_t mode = (int16_t)usRegHoldBuf[1680 - MB_HOLD_START_ADDR];
+    // 读取该轴的运动模式（1680 + axis_id）
+    uint16_t mode_addr = 1680 + axis_id;
+    int16_t mode = (int16_t)usRegHoldBuf[mode_addr - MB_HOLD_START_ADDR];
     if (mode < 1 || mode > 2) {
         printf("Invalid mode: %d (1=ABS, 2=JOG)\r\n", mode);
         return;
     }
 
-    // 读取目标位置（float，1652‑1653）
     float target_pos = GetFloatFromReg(&usRegHoldBuf[1652 - MB_HOLD_START_ADDR]);
 
     // 读取速度（int16 → float mm/s）
@@ -117,8 +117,10 @@ static void on_axis_execute(uint16_t addr)
         // JOG 点动，速度符号控制方向
         XQ_JogMove((AxisID)axis_id, speed, 30000.0f, 2450.0f, 5);
     }
+    // 后续可加 mode == 3 回零，mode == 4 插补...
 }
 
+// 处理“停止轴运动”（1298）
 static void on_axis_stop(uint16_t addr) {
     // 1298 的低字节是轴号，高字节是停止模式（0=平滑，1=急停）
     uint16_t val = usRegHoldBuf[1298 - MB_HOLD_START_ADDR];
@@ -130,6 +132,10 @@ static void on_axis_stop(uint16_t addr) {
         printf("Axis %d stop (EMG=%d)\r\n", axis_id, emg);
     }
 }
+
+// 读取当前位置
+    
+
 
 // // 示例2：处理“设置规划位置”（1652）
 // static void on_set_plan_pos(uint16_t addr) {
