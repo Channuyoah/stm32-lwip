@@ -3,6 +3,7 @@
 #include "usart.h"
 #include "cmsis_os2.h"
 #include "xq_modbus.h"
+#include "xq_axis.h"
 #include <stdio.h>
 
 
@@ -641,6 +642,60 @@ void XQ_IO_Refresh_Task(void *argument) {
       /* 设置所有输出状态 */
       XQ_SetDO(xqIO_Output);
     }
+
+    /* ══════ 限位检测与回零 ══════ */
+    for (AxisID i = AXIS_0; i < AXIS_SUM; i++) {
+        uint8_t pos_bit = axis[i].limit_cfg.limit_pos;
+        uint8_t neg_bit = axis[i].limit_cfg.limit_neg;
+        uint8_t home_bit = axis[i].limit_cfg.home;
+
+        // 正限位触发保护：轴正方向运行且对应 DI 为高
+        if (pos_bit < 48 && (xqIO_Input & (1ULL << pos_bit))) {
+            if (axis[i].is_moving && xq_axis_read_dir(i) == AXIS_DIR_CCW) {
+                XQ_Stop(i, true, 0, 0, 0);          // 急停
+                axis[i].limit_cfg.homing = 1;        // 启动回零
+                printf("Axis %d: POSITIVE LIMIT! Emergency stop, starting homing...\r\n", i);
+            }
+        }
+
+        // 负限位触发保护：轴负方向运行且对应 DI 为高
+        if (neg_bit < 48 && (xqIO_Input & (1ULL << neg_bit))) {
+            if (axis[i].is_moving && xq_axis_read_dir(i) == AXIS_DIR_CW) {
+                XQ_Stop(i, true, 0, 0, 0);
+                axis[i].limit_cfg.homing = 1;
+                printf("Axis %d: NEGATIVE LIMIT! Emergency stop, starting homing...\r\n", i);
+            }
+        }
+
+        // 回零过程控制
+        if (axis[i].limit_cfg.homing == 1) {
+            // 如果轴已经停止，启动回零运动
+            if (axis[i].is_moving == false) {
+                // 根据触发限位的方向决定回零方向：正限位→向负方向；负限位→向正方向
+                float dir = 1.0f;   // 默认正方向
+                if (pos_bit < 48 && (xqIO_Input & (1ULL << pos_bit))) {
+                    dir = -1.0f;   // 正限位已触发，向负方向走
+                } else if (neg_bit < 48 && (xqIO_Input & (1ULL << neg_bit))) {
+                    dir = 1.0f;    // 负限位已触发，向正方向走
+                } else {
+                    // 如果没有限位触发（可能是手动启动回零），默认向负方向（可根据需要改）
+                    dir = -1.0f;
+                }
+                float speed = (float)axis[i].limit_cfg.home_speed;
+                XQ_JogMove(i, dir * speed, 30000.0f, 2450.0f, 5);   // 使用默认 jerk/a_max
+                printf("Axis %d: Homing move at %.1f mm/s dir=%.0f\r\n", i, speed, dir);
+            }
+
+            // 检测原点：原点 DI 触发（高电平有效）
+            if (home_bit < 48 && (xqIO_Input & (1ULL << home_bit))) {
+                XQ_Stop(i, true, 0, 0, 0);          // 碰到原点立即停止
+                axis[i].position = 0;                // 位置清零
+                axis[i].limit_cfg.homing = 2;        // 回零完成
+                printf("Axis %d: HOME reached, position set to 0\r\n", i);
+            }
+        }
+    }
+
     osDelay(1);  // 每1ms检查一次输入输出状态
   }
 }

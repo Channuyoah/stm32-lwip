@@ -68,6 +68,8 @@ extern uint16_t usRegInputBuf[MB_INPUT_SIZE];
 #define REG_AXIS_STATUS_OFF_SPEED      6   // 当前速度(int16)
 #define REG_AXIS_STATUS_OFF_LIMIT      7   // 限位触发状态
 #define REG_AXIS_STATUS_OFF_HOMING     8   // 回零状态
+#define REG_AXIS_STATUS_OFF_RESERVED   9   // 预留
+
 
 // 模拟输入读取区（输入寄存器 1200-1203）
 #define REG_AI_BASE            1200

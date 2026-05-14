@@ -78,7 +78,7 @@ eMBErrorCode eMBRegHoldingCB(UCHAR *pucRegBuffer, USHORT usAddress,
 // ========== 输入寄存器回调 (功能码 04) ==========
 eMBErrorCode eMBRegInputCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNRegs)
 {
-    uint16_t offset = usAddress - MB_INPUT_START_ADDR;
+    uint16_t offset = usAddress - MB_INPUT_START_ADDR - 1;
     if ((offset + usNRegs) > MB_INPUT_SIZE) {
         return MB_ENOREG;
     }
@@ -134,7 +134,7 @@ eMBErrorCode eMBRegCoilsCB(UCHAR *pucRegBuffer, USHORT usAddress,
 // ========== 离散输入回调 (功能码 02) ==========
 eMBErrorCode eMBRegDiscreteCB(UCHAR *pucRegBuffer, USHORT usAddress, USHORT usNDiscrete)
 {
-    uint16_t bitOffset = usAddress - MB_DISC_START_ADDR;
+    uint16_t bitOffset = usAddress - MB_DISC_START_ADDR - 1;
     if ((bitOffset + usNDiscrete) > MB_DISC_SIZE) {
         return MB_ENOREG;
     }

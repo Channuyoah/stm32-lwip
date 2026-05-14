@@ -110,6 +110,7 @@ void xq_Analog_Refresh_Task(void *argument)
             // 每AXIS_STATUS_INTERVAL次刷新一次轴状态
             if (++count >= AXIS_STATUS_INTERVAL) {
                 count = 0;
+                printf("Refreshing axis status...\r\n");
                 xq_update_axis_status();
             }
         }

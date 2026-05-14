@@ -134,9 +134,62 @@ static void on_axis_cmd_execute(uint16_t addr)
     float speed = (float)speed_raw;
     int16_t mode = (int16_t)usRegHoldBuf[base - MB_HOLD_START_ADDR + REG_AXIS_CMD_OFF_MODE];
 
+    // 计算当前位置 (mm)
+    float cur_pos_mm = (float)axis[axis_id].position * axis[axis_id].pitch / axis[axis_id].microsteps;
+    // 移动距离 (mm)
+    float distance = fabsf(target_pos - cur_pos_mm);
+
+    // 根据移动距离限制最大速度
+    float max_speed = 10.0f;   // 默认上限
+    if (distance <= 0.5f) {
+        max_speed = 1.0f;
+    } else if (distance <= 1.0f) {   // 0.5~1.0 mm 采用 5 mm/s
+        max_speed = 5.0f;
+    }
+
+    if (speed < 0) {
+        speed = 0;
+        printf("Axis %d: Warning - speed cannot be negative, set to 0\r\n", axis_id);
+    } else if (speed > max_speed) {
+        speed = max_speed; // 限制最大速度
+        printf("Axis %d: speed limited to %.1f mm/s (distance=%.3f mm)\r\n",
+               axis_id, max_speed, distance);
+    }
+
     printf("Axis %d cmd: mode=%d, pos=%.3f, speed=%.1f\r\n",
            axis_id, mode, target_pos, speed);
 
+    // ---------- 限位与回零保护 ----------
+    uint8_t pos_bit = axis[axis_id].limit_cfg.limit_pos;
+    uint8_t neg_bit = axis[axis_id].limit_cfg.limit_neg;
+
+    // 回零中拒绝任何非停止命令
+    if (axis[axis_id].limit_cfg.homing == 1 && mode != 0) {
+        printf("Axis %d: homing in progress, command ignored\r\n", axis_id);
+        return;
+    }
+
+    // 计算意图运动方向
+    AxisDir intended_dir;
+    if (mode == 2) {   // JOG：速度符号决定方向
+        intended_dir = (speed > 0) ? AXIS_DIR_CCW : AXIS_DIR_CW;
+    } else {          // ABS：目标位置决定方向
+        int32_t target_pulse = lroundf(target_pos * axis[axis_id].microsteps / axis[axis_id].pitch);
+        intended_dir = (target_pulse >= axis[axis_id].position) ? AXIS_DIR_CCW : AXIS_DIR_CW;
+    }
+
+    // 检查正限位
+    if (intended_dir == AXIS_DIR_CCW && pos_bit < 48 && (xqIO_Input & (1ULL << pos_bit))) {
+        printf("Axis %d: positive limit active, move denied\r\n", axis_id);
+        return;
+    }
+    // 检查负限位
+    if (intended_dir == AXIS_DIR_CW && neg_bit < 48 && (xqIO_Input & (1ULL << neg_bit))) {
+        printf("Axis %d: negative limit active, move denied\r\n", axis_id);
+        return;
+    }
+
+    // ---------- 执行运动 ----------
     switch (mode) {
         case 0: // 停止
             XQ_Stop((AxisID)axis_id, false, 30000.0f, 2450.0f, 5);
@@ -147,9 +200,11 @@ static void on_axis_cmd_execute(uint16_t addr)
         case 2: // JOG 点动
             XQ_JogMove((AxisID)axis_id, speed, 30000.0f, 2450.0f, 5);
             break;
-        case 3: // 回零（预留）
-            // XQ_Home((AxisID)axis_id, speed, 30000.0f, 2450.0f, 5);
-            printf("Axis %d: Home mode not implemented yet\r\n", axis_id);
+        case 3: // 回零（手动触发）
+            // 停止当前运动，设置 homing 标志，由 XQ_IO_Refresh_Task 接管后续
+            XQ_Stop((AxisID)axis_id, true, 0, 0, 0);
+            axis[axis_id].limit_cfg.homing = 1;
+            printf("Axis %d: manual home command, homing started\r\n", axis_id);
             break;
         default:
             printf("Axis %d: Invalid mode %d\r\n", axis_id, mode);
@@ -162,36 +217,42 @@ void xq_update_axis_status(void)
 {
     for (int i = 0; i < AXIS_SUM; i++) {
         uint16_t base = REG_AXIS_STATUS_BASE + i * REG_AXIS_STATUS_STRIDE;
+        uint16_t *pStatus = &usRegInputBuf[base - MB_INPUT_START_ADDR];
 
-        // 轴号
-        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_ID] = i;
+        // 0: 轴号
+        pStatus[REG_AXIS_STATUS_OFF_ID] = i;
 
-        // 运动状态
-        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_MOVING] = axis[i].is_moving;
+        // 1: 运动状态
+        pStatus[REG_AXIS_STATUS_OFF_MOVING] = axis[i].is_moving ? 1 : 0;
 
-        // 当前位置 (float, mm)
-        float cur_pos = (float)axis[i].position * axis[i].pitch / axis[i].microsteps;
-        SetFloatToReg(&usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_CURPOS], cur_pos);
+        // 2-3: 当前位置 (float, mm)
+        float cur_pos_mm = (float)axis[i].position * axis[i].pitch / axis[i].microsteps;
+        SetFloatToReg(&pStatus[REG_AXIS_STATUS_OFF_CURPOS], cur_pos_mm);
 
-        // 目标位置 (float, mm) — 需要从命令区同步过来，这里简单留空或读命令区
-        // 也可以不填，上位机直接读命令区
+        // 4-5: 目标位置 (float, mm)  -- 从命令区同步
+        uint16_t cmd_base = REG_AXIS_CMD_BASE + i * REG_AXIS_CMD_STRIDE;
+        float target_pos = GetFloatFromReg(&usRegHoldBuf[cmd_base - MB_HOLD_START_ADDR + REG_AXIS_CMD_OFF_POS]);
+        SetFloatToReg(&pStatus[REG_AXIS_STATUS_OFF_TARPOS], target_pos);
 
-        // 当前速度 (int16, mm/s)
-        // 需从轴结构体获取实际速度，暂时填0
-        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_SPEED] = 0;
+        // 6: 当前速度 (int16, mm/s)  -- 暂时用命令区设置的速度
+        int16_t speed_cmd = (int16_t)usRegHoldBuf[cmd_base - MB_HOLD_START_ADDR + REG_AXIS_CMD_OFF_SPEED];
+        pStatus[REG_AXIS_STATUS_OFF_SPEED] = (uint16_t)speed_cmd;
 
-        // 限位触发状态
+        // 7: 限位触发状态
         uint16_t limit_state = 0;
         uint8_t pos_bit = axis[i].limit_cfg.limit_pos;
         uint8_t neg_bit = axis[i].limit_cfg.limit_neg;
         uint8_t home_bit = axis[i].limit_cfg.home;
-        if (pos_bit < 48 && (xqIO_Input & (1ULL << pos_bit))) limit_state |= 0x01;
-        if (neg_bit < 48 && (xqIO_Input & (1ULL << neg_bit))) limit_state |= 0x02;
-        if (home_bit < 48 && (xqIO_Input & (1ULL << home_bit))) limit_state |= 0x04;
-        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_LIMIT] = limit_state;
+        if (pos_bit < 48 && (xqIO_Input & (1ULL << pos_bit))) limit_state |= 0x01; // 正限位触发
+        if (neg_bit < 48 && (xqIO_Input & (1ULL << neg_bit))) limit_state |= 0x02; // 负限位触发
+        if (home_bit < 48 && (xqIO_Input & (1ULL << home_bit))) limit_state |= 0x04; // 原点触发
+        pStatus[REG_AXIS_STATUS_OFF_LIMIT] = limit_state;
 
-        // 回零状态
-        usRegInputBuf[base - MB_INPUT_START_ADDR + REG_AXIS_STATUS_OFF_HOMING] = axis[i].limit_cfg.homing;
+        // 8: 回零状态
+        pStatus[REG_AXIS_STATUS_OFF_HOMING] = axis[i].limit_cfg.homing;
+
+        // 9: 预留，填0
+        pStatus[REG_AXIS_STATUS_OFF_RESERVED] = 0;
     }
 }
 
