@@ -9,6 +9,8 @@
 #define ADC_CHANNEL_ADC3         1  // ADC3单独采样
 
 extern uint16_t t2t1;
+extern uint16_t app_adc1_buffer[1024];
+extern uint16_t app_adc3_buffer[1024];
 
 // 函数声明
 /**

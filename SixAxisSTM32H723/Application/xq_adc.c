@@ -7,8 +7,8 @@
 __attribute__((at(0x38000000))) uint32_t adc1_buffer[1024];
 __attribute__((at(0x38001000))) uint16_t adc3_buffer[1024]; /* 半字 */
 
-static uint16_t app_adc1_buffer[1024];
-static uint16_t app_adc3_buffer[1024];
+uint16_t app_adc1_buffer[1024];
+uint16_t app_adc3_buffer[1024];
 
 volatile uint8_t adc1_running = 0;  // ADC运行状态: 0=停止, 1=运行
 volatile uint8_t adc3_running = 0;  // ADC运行状态: 0=停止, 1=运行

@@ -23,6 +23,8 @@
 //绑定轴的上下限位，原点。
 //读当前位置
 
+// TODO: DI/DO 48位
+
 
 /* ========== 数字输出 ========== */
 static void on_DO32_Output(uint16_t addr)

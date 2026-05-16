@@ -5,6 +5,7 @@
 #include "xq_adc.h"
 #include "xq_modbus.h"
 #include <stdlib.h>
+#include <string.h>
 
 // 任务句柄，用于发通知
 TaskHandle_t xAnalogRefreshTaskHandle = NULL;
@@ -110,7 +111,6 @@ void xq_Analog_Refresh_Task(void *argument)
             // 每AXIS_STATUS_INTERVAL次刷新一次轴状态
             if (++count >= AXIS_STATUS_INTERVAL) {
                 count = 0;
-                printf("Refreshing axis status...\r\n");
                 xq_update_axis_status();
             }
         }
@@ -123,39 +123,47 @@ void xq_Analog_Refresh_Task(void *argument)
  */
 void xq_refresh_analog_inputs(void)
 {
-
     static uint32_t call_count = 0;
-    float_t buf[100];
+    static uint16_t local_buf[1000];   // 使用原始 ADC 值，避免浮点拷贝耗时
 
-    // 模拟输入1 (1664) – 来自 ADC1+ADC2 双模式
+    // 模拟输入1 (1200) – 来自 ADC1+ADC2 双模式
     if (adc1_running) {
-        if (XQ_GetADC(ADC_CHANNEL_DUAL_MODE, buf, 100) == HAL_OK) {
-            float sum = 0.0f;
-            for (int i = 0; i < 50; i++) {
-                sum += buf[i * 2];   // ADC1 数据
-            }
-            float ai1 = sum / 50.0f;
-            SetFloatToReg(&usRegInputBuf[REG_AI1_ADDR - MB_INPUT_START_ADDR], ai1);
+        /* 关中断，原子拷贝 1000 个 uint16_t */
+        __disable_irq();
+        memcpy(local_buf, app_adc1_buffer, 1000 * sizeof(uint16_t));
+        __enable_irq();
 
-            if ((call_count % 100) == 0) {
-              printf("AI1 = %.3f V\r\n", ai1);
-            }
+        // 在中断打开后慢慢做浮点转换和平均
+        float sum = 0.0f;
+        for (int i = 0; i < 500; i++) {
+            uint16_t adc_val = local_buf[i * 2];      // ADC1 数据
+            float volt = adc_val * (205.0f/65.0f) * 3.3f / 16383.0f;
+            sum += volt;
+        }
+        float ai1 = sum / 500.0f;
+        SetFloatToReg(&usRegInputBuf[REG_AI1_ADDR - MB_INPUT_START_ADDR], ai1);
+
+        if ((call_count % 100) == 0) {
+            printf("AI1 = %.3f V\r\n", ai1);
         }
     }
 
-    // 模拟输入2 (1666) – 来自 ADC3
+    // 模拟输入2 (1202) – 来自 ADC3
     if (adc3_running) {
-        if (XQ_GetADC(ADC_CHANNEL_ADC3, buf, 100) == HAL_OK) {
-            float sum = 0.0f;
-            for (int i = 0; i < 100; i++) {
-                sum += buf[i];
-            }
-            float ai2 = sum / 100.0f;
-            SetFloatToReg(&usRegInputBuf[REG_AI2_ADDR - MB_INPUT_START_ADDR], ai2);
+        __disable_irq();
+        memcpy(local_buf, app_adc3_buffer, 1000 * sizeof(uint16_t));
+        __enable_irq();
 
-            if ((call_count % 100) == 0) {
-              printf("AI2 = %.3f V\r\n", ai2);
-            }
+        float sum = 0.0f;
+        for (int i = 0; i < 1000; i++) {
+            float volt = local_buf[i] * (205.0f/65.0f) * 3.3f / 4095.0f;
+            sum += volt;
+        }
+        float ai2 = sum / 1000.0f;
+        SetFloatToReg(&usRegInputBuf[REG_AI2_ADDR - MB_INPUT_START_ADDR], ai2);
+
+        if ((call_count % 100) == 0) {
+            printf("AI2 = %.3f V\r\n", ai2);
         }
     }
     call_count++;
